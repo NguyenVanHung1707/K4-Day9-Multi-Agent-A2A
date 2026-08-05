@@ -114,7 +114,7 @@ class PolicyAgent:
         payment_total_brl = pay_recon["payment_total_brl"] or 0.0
         freight_total_brl = pay_recon["freight_total_brl"] or 0.0
 
-        # Primary issue priority evaluation (EC_POLICY_V2)
+        # Primary issue priority evaluation (EC_POLICY_V2 Tree)
         if order_status == "canceled" and payment_total_brl > 0:
             primary_issue = "canceled_order_paid"
             root_cause_code = "ORDER_CANCELED_AFTER_PAYMENT"
@@ -172,23 +172,31 @@ class PolicyAgent:
             secondary_issues.append("multiple_categories")
 
         # Resolution actions in exact specified order (README.md line 115)
+        # Position [0]: Primary Action
         resolution_actions = [primary_action]
 
+        # Position [1]: Review Seller Handoff (ONLY late_delivery_seller) or Review Carrier Delay (ONLY late_delivery_logistics)
         if primary_issue == "late_delivery_seller":
             resolution_actions.append("review_seller_handoff")
         elif primary_issue == "late_delivery_logistics":
             resolution_actions.append("review_carrier_delay")
 
+        # Position [2]: Verify Refund Completion (ONLY when recommended_refund_brl > 0)
         if recommended_refund_brl > 0:
             resolution_actions.append("verify_refund_completion")
 
+        # Position [3]: Coordinate Multi-Seller Case (ONLY when multi_seller_order)
         if "multi_seller_order" in secondary_issues:
             resolution_actions.append("coordinate_multi_seller_case")
 
+        # Position [4]: Verify Payment Allocation (ONLY when split_payment AND primary_issue != valid_split_payment)
         if "split_payment" in secondary_issues and primary_issue != "valid_split_payment":
             resolution_actions.append("verify_payment_allocation")
 
+        # Strict Array Cap (max 5 actions)
         resolution_actions = resolution_actions[:5]
+
+        # Case Status
         case_status = "action_required" if recommended_refund_brl > 0 else "no_action"
 
         # Evidence IDs
@@ -245,6 +253,10 @@ class VerifierAgent:
         pay_recon = raw_data["payment_reconciliation"]
         aff_entities = raw_data["affected_entities"]
         prod_context = raw_data["product_context"]
+
+        # Clean raw internal keys from pay_recon
+        if "late_seller_freight_brl" in pay_recon:
+            del pay_recon["late_seller_freight_brl"]
 
         if not has_items:
             pay_recon["expected_total_brl"] = None

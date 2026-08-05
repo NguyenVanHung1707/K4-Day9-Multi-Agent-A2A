@@ -172,6 +172,7 @@ class DataEngine:
         # Handoff variance & Seller analysis
         seller_handoff_analysis = []
         late_handoff_seller_ids = []
+        late_seller_freight_brl = 0.0
 
         if has_items and carrier_handoff_at_dt:
             for sid in seller_ids_ordered:
@@ -187,6 +188,11 @@ class DataEngine:
                     })
                     if is_late and sid not in late_handoff_seller_ids:
                         late_handoff_seller_ids.append(sid)
+
+            # Sum freight for late sellers only
+            for item in items_list:
+                if item["seller_id"] in late_handoff_seller_ids:
+                    late_seller_freight_brl += float(item["freight_value"])
 
         # Flags for Policy Evaluation
         is_delivered_late = False
@@ -227,6 +233,7 @@ class DataEngine:
                 "currency": "BRL",
                 "item_total_brl": item_total_brl_out,
                 "freight_total_brl": freight_total_brl_out,
+                "late_seller_freight_brl": round(late_seller_freight_brl, 2),
                 "expected_total_brl": expected_total_brl,
                 "payment_total_brl": payment_total_brl_out,
                 "difference_brl": difference_brl,
