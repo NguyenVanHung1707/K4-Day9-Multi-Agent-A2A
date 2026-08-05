@@ -11,7 +11,7 @@ from src.agents import CoordinatorAgent
 
 def create_versioned_zip(output_dir: str, base_dir: str) -> str:
     """
-    Creates a versioned zip archive (output.zip, output_v2.zip, output_v3.zip...) containing all 50 output JSON files.
+    Creates a versioned zip archive (output.zip, output_v2.zip, output_v3.zip...) containing output/EC_001.json to output/EC_050.json.
     """
     version = 1
     zip_filename = "output.zip"
@@ -24,7 +24,9 @@ def create_versioned_zip(output_dir: str, base_dir: str) -> str:
 
     with zipfile.ZipFile(zip_filepath, "w", zipfile.ZIP_DEFLATED) as zipf:
         for fpath in json_files:
-            zipf.write(fpath, os.path.basename(fpath))
+            # Preserve output/ directory prefix inside zip archive
+            arcname = f"output/{os.path.basename(fpath)}"
+            zipf.write(fpath, arcname)
 
     return zip_filename
 
@@ -112,7 +114,7 @@ def main():
     with open(metadata_path, "w", encoding="utf-8") as f:
         json.dump(metadata_content, f, indent=2, ensure_ascii=False)
 
-    # Automatically create versioned output zip (e.g. output_v2.zip, output_v3.zip...)
+    # Automatically create versioned output zip
     zip_created = create_versioned_zip(output_dir, base_dir)
 
     print(f"Pipeline completed successfully in {total_time}s!")
