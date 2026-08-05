@@ -80,26 +80,26 @@ def create_submission_zip_from_dir(src_dir: str, zip_path: str):
     print(f"Created submission zip: {zip_path}")
 
 
-def rebuild_version(version_name: str = "output_v5"):
+def rebuild_version(output_dir_name: str = "output"):
     base_dir = os.path.dirname(os.path.abspath(__file__))
     data_dir = os.path.join(base_dir, "data")
     input_dir = os.path.join(base_dir, "input")
-    target_out_dir = os.path.join(base_dir, version_name)
-    trace_path = os.path.join(base_dir, f"trace_{version_name}.jsonl")
-    metadata_path = os.path.join(base_dir, f"metadata_{version_name}.json")
+    target_out_dir = os.path.join(base_dir, output_dir_name)
+    trace_path = os.path.join(base_dir, "trace.jsonl")
+    metadata_path = os.path.join(base_dir, "metadata.json")
     logging_dir = os.path.join(base_dir, "logging")
 
     os.makedirs(target_out_dir, exist_ok=True)
     os.makedirs(logging_dir, exist_ok=True)
 
-    print(f"Initializing DataEngine for version {version_name}...")
+    print(f"Initializing DataEngine for output directory '{output_dir_name}'...")
     data_engine = DataEngine(data_dir=data_dir)
     coordinator = FastCoordinatorAgent(data_engine=data_engine)
 
     all_traces = []
     start_time = time.time()
 
-    print(f"Building versioned output files in {version_name}/ for all 50 cases...")
+    print(f"Building output files in {output_dir_name}/ for all 50 cases...")
     for i in range(1, 51):
         case_file = f"EC_{i:03d}.json"
         case_path = os.path.join(input_dir, case_file)
@@ -132,8 +132,7 @@ def rebuild_version(version_name: str = "output_v5"):
         for trace in all_traces:
             f.write(json.dumps(trace, ensure_ascii=False) + "\n")
 
-    # Also copy to root trace.jsonl and logging/trace.jsonl
-    shutil.copy(trace_path, os.path.join(base_dir, "trace.jsonl"))
+    # Also sync to logging/trace.jsonl
     shutil.copy(trace_path, os.path.join(logging_dir, "trace.jsonl"))
 
     total_time = round(time.time() - start_time, 2)
@@ -162,21 +161,17 @@ def rebuild_version(version_name: str = "output_v5"):
     with open(metadata_path, "w", encoding="utf-8") as f:
         json.dump(metadata_content, f, indent=2, ensure_ascii=False)
 
-    # Also copy to root metadata.json and logging/metadata.json
-    shutil.copy(metadata_path, os.path.join(base_dir, "metadata.json"))
+    # Also sync to logging/metadata.json
     shutil.copy(metadata_path, os.path.join(logging_dir, "metadata.json"))
 
-    zip_filename = f"{version_name}.zip"
+    zip_filename = "output.zip"
     zip_path = os.path.join(base_dir, zip_filename)
     create_submission_zip_from_dir(target_out_dir, zip_path)
 
-    # Also keep output.zip updated to point to latest version zip
-    create_submission_zip_from_dir(target_out_dir, os.path.join(base_dir, "output.zip"))
-
-    print(f"Rebuild completed for {version_name} in {total_time}s!")
+    print(f"Rebuild completed for {output_dir_name} in {total_time}s!")
     print(f"50 JSON files written to {target_out_dir}/")
-    print(f"Submission zip created: {zip_path}")
+    print(f"Main submission zip created: {zip_path}")
 
 
 if __name__ == "__main__":
-    rebuild_version("output_v5")
+    rebuild_version("output")
