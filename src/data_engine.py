@@ -10,7 +10,6 @@ class DataEngine:
         self.load_data()
 
     def load_data(self):
-        # Load CSVs
         orders_path = os.path.join(self.data_dir, "olist_orders_dataset.csv")
         customers_path = os.path.join(self.data_dir, "olist_customers_dataset.csv")
         items_path = os.path.join(self.data_dir, "olist_order_items_dataset.csv")
@@ -27,7 +26,7 @@ class DataEngine:
         self.df_sellers = pd.read_csv(sellers_path)
         self.df_translation = pd.read_csv(translation_path)
 
-        # Indexing for ultra-fast lookup
+        # Indexing for fast lookup
         self.orders_by_id = self.df_orders.set_index("order_id").to_dict("index")
         self.customers_by_id = self.df_customers.set_index("customer_id").to_dict("index")
         
@@ -117,9 +116,9 @@ class DataEngine:
             prod_row = self.products_by_id.get(pid, {})
             cat_name_pt = prod_row.get("product_category_name")
             if cat_name_pt and not pd.isna(cat_name_pt):
-                cat_name_en = self.category_translation.get(cat_name_pt, cat_name_pt)
-                if cat_name_en not in category_names:
-                    category_names.append(cat_name_en)
+                # Primary: raw category_name from products.csv (e.g. beleza_saude)
+                if cat_name_pt not in category_names:
+                    category_names.append(cat_name_pt)
 
             item_total_brl += price
             freight_total_brl += freight
