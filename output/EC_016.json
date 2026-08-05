@@ -64,6 +64,7 @@
     "reconciled": true,
     "payment_types": [
       "credit_card",
+      "voucher",
       "voucher"
     ]
   },
@@ -96,6 +97,7 @@
   "resolution_actions": [
     "refund_freight",
     "review_carrier_delay",
+    "verify_refund_completion",
     "verify_payment_allocation"
   ]
 }

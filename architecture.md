@@ -100,9 +100,43 @@ LLM. Gọi LLM ở đây không ảnh hưởng độ chính xác của `output/*
 quả LLM chỉ ghi vào `trace.jsonl`, không phải trường bắt buộc trong schema
 mục 6 README.
 
-Model dùng: **Gemma-2-9B-It** qua Gemini API (đúng ràng buộc mục 9.1: ≤10B
-tham số). Client tự động fallback an toàn (không crash pipeline) nếu thiếu
-mạng/API key — xem `llm_client.py`.
+### Chọn model thỏa ràng buộc ≤10B (mục 9.1)
+
+Ban đầu chọn **Gemma-2-9B-It qua Gemini API**. Kiểm chứng lại tại trang chính
+thức `ai.google.dev/gemma/docs/core/gemma_on_gemini_api` cho thấy lựa chọn này
+**không còn khả thi**: Gemini API hiện chỉ hỗ trợ đúng 2 model Gemma, và cả hai
+đều vượt 10B; `gemma-2-9b-it` đã bị Google gỡ (gọi sẽ lỗi 404).
+
+| Lựa chọn | Params | Thỏa ≤10B | Ghi chú |
+|---|---|---|---|
+| **`llama-3.1-8b-instant` (Groq)** | **8B** | ✅ | **Lựa chọn cuối** — tham số công bố công khai |
+| `gemma3:4b` qua Ollama (local) | 4B | ✅ | Phương án dự phòng, bật bằng `LLM_PROVIDER=ollama` |
+| `qwen3:8b`, `llama3.1:8b`, `mistral:7b` (local) | 7–8B | ✅ | Thay thế khác |
+| `openai/gpt-oss-20b` (Groq) | 20B | ❌ | Groq khuyến nghị thay thế, nhưng vượt giới hạn |
+| `gemma2-9b-it` (Groq) | 9B | — | Groq **đã tắt** từ 08/10/2025 |
+| `gemma-2-9b-it` (Gemini API) | 9B | — | Google **đã gỡ** khỏi Gemini API, lỗi 404 |
+| `gemma-4-31b-it` (Gemini API) | 31B | ❌ | Vượt xa giới hạn |
+| `gemma-4-26b-a4b-it` (Gemini API) | 26B tổng / 4B active | ❌ | MoE; tính tổng tham số thì vượt |
+| `gemini-2.x-flash` | Không công bố | ❌ | Không chứng minh được tuân thủ |
+
+**Chốt: `llama-3.1-8b-instant` qua Groq API.** Lý do: 8B — số tham số được
+công bố công khai nên **chứng minh được** tuân thủ ràng buộc ≤10B (điểm này
+quan trọng: model đóng như `gemini-flash` không công bố tham số nên dùng là
+không chứng minh được, rủi ro bị tính không tuân thủ = 0 điểm). Groq là
+provider hợp lệ theo mục 9.1 ("qua provider tùy ý"). Tên model khai báo trong
+`llm_client.py` (`GROQ_MODEL`) và `metadata.json`, **không** đặt trong `.env`
+— đúng mục 9.4; `.env` chỉ chứa `GROQ_API_KEY`.
+
+⚠️ **Vòng đời model:** Groq đã thông báo ngừng `llama-3.1-8b-instant` từ
+**16/08/2026**. Model chạy bình thường tại thời điểm nộp bài. Model thay thế
+Groq gợi ý (`openai/gpt-oss-20b`, 20B) vượt 10B nên không dùng được cho bài
+này. Sau mốc đó, dùng phương án dự phòng chạy local: `LLM_PROVIDER=ollama`
+với `gemma3:4b` (4B).
+
+Client gọi API bằng `urllib` trong thư viện chuẩn Python (không cần SDK
+ngoài) và tự động fallback an toàn — mất mạng hay API lỗi thì ghi lỗi vào
+`trace.jsonl` chứ không làm crash pipeline; số liệu 50 case vẫn đúng vì
+`output/*.json` không phụ thuộc LLM.
 
 ## 5. Quyết định kỹ thuật quan trọng: Policy & Verifier là rule engine, không phải LLM
 

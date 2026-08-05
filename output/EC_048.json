@@ -99,6 +99,7 @@
   },
   "resolution_actions": [
     "refund_freight",
-    "review_seller_handoff"
+    "review_seller_handoff",
+    "verify_refund_completion"
   ]
 }

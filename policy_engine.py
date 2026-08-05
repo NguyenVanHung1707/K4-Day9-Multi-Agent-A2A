@@ -82,6 +82,19 @@ def build_root_cause_and_financial(primary_issue: str, root_cause_code: str,
     return root_cause_analysis, financial_resolution
 
 
+import os
+
+# --- Cac diem README KHONG quy dinh ro -> de duoi dang bien de A/B thu ---
+# VARIANT_REFUND_COMPLETION:
+#   "example" (mac dinh) = chi them verify_refund_completion cho case full
+#      refund (canceled/unavailable). Cach nay bam theo VI DU MAU o README
+#      muc 6: vi du do la EC_002 (moi con so trung khop) va co
+#      case_status=action_required nhung KHONG co verify_refund_completion.
+#   "rule"  = them cho MOI case action_required. Cach nay bam theo doan van
+#      muc 4 liet ke cac action bo sung ma chi neu duy nhat 1 ngoai le.
+VARIANT_REFUND_COMPLETION = os.environ.get("VARIANT_REFUND_COMPLETION", "example").lower()
+
+
 def build_actions(primary_issue: str, case_status: str, secondary_issues: list[str]) -> list[str]:
     primary_action_map = {
         "canceled_order_paid": "issue_full_refund",
@@ -105,8 +118,12 @@ def build_actions(primary_issue: str, case_status: str, secondary_issues: list[s
     # verify_refund_completion trong resolution_actions, chi co
     # review_seller_handoff + verify_payment_allocation. late_delivery_* da
     # co review_seller_handoff/review_carrier_delay lam buoc theo doi rieng.
-    if primary_issue in ("canceled_order_paid", "unavailable_order_paid"):
-        actions.append("verify_refund_completion")
+    if VARIANT_REFUND_COMPLETION == "rule":
+        if case_status == "action_required":
+            actions.append("verify_refund_completion")
+    else:  # "example"
+        if primary_issue in ("canceled_order_paid", "unavailable_order_paid"):
+            actions.append("verify_refund_completion")
 
     if "multi_seller_order" in secondary_issues:
         actions.append("coordinate_multi_seller_case")

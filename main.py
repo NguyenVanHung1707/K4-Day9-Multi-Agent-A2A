@@ -23,7 +23,9 @@ import coordinator
 BASE = Path(__file__).parent
 INPUT_DIR = BASE / "input"
 OUTPUT_DIR = BASE / "output"
-TRACE_PATH = BASE / "trace.jsonl"
+# trace.jsonl + metadata.json de trong logging/ theo dung cau truc repo nhom
+LOG_DIR = BASE / "logging"
+TRACE_PATH = LOG_DIR / "trace.jsonl"
 
 
 def load_cases() -> list[dict]:
@@ -40,13 +42,23 @@ def main():
     args = parser.parse_args()
 
     OUTPUT_DIR.mkdir(exist_ok=True)
+    LOG_DIR.mkdir(exist_ok=True)
     data = get_data()
     cases = load_cases()
     if not cases:
         print(f"Khong tim thay input nao trong {INPUT_DIR}", file=sys.stderr)
         sys.exit(1)
 
-    print(f"Chay {len(cases)} case, {args.workers} worker song song, LLM={'TAT' if args.no_llm else 'BAT'}")
+    if args.no_llm:
+        print(f"Chay {len(cases)} case, {args.workers} worker song song, LLM=TAT (dry-run)")
+    else:
+        import llm_client
+        m = llm_client.active_model()
+        print(f"Chay {len(cases)} case, {args.workers} worker song song")
+        print(f"  LLM provider : {m['provider']}")
+        print(f"  Model        : {m['model']} ({m['parameter_size']})")
+        if not m["compliant_10b"]:
+            print("  !! CANH BAO: model nay VUOT 10B parameters -> KHONG tuan thu README muc 9.1")
 
     results = []
     t0 = time.time()

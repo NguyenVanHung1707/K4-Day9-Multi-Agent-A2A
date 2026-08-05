@@ -1,3 +1,12 @@
-pandas>=2.0
+# Bat buoc
+# Ghim pandas < 3: toan bo pipeline da duoc chay va kiem chung 50/50 case tren
+# pandas 2.x. pandas 3.0 doi mot so hanh vi mac dinh (copy-on-write, string
+# dtype) nen khong dung ban chua kiem chung khi nop bai.
+pandas>=2.0,<3
 python-dotenv>=1.0
-google-genai>=1.0
+
+# LLM: goi Groq API (llama-3.1-8b-instant) bang urllib trong thu vien chuan
+# Python - KHONG can cai them SDK nao. Chi can dat GROQ_API_KEY trong .env.
+#
+# Phuong an du phong chay local (LLM_PROVIDER=ollama) cung dung urllib,
+# chi can cai Ollama va chay: ollama pull gemma3:4b
