@@ -1,0 +1,47 @@
+{
+  "system_name": "K4-Day9-Multi-Agent-A2A-Ecommerce-Dispute-Resolution",
+  "policy_version": "EC_POLICY_V2",
+  "llm": {
+    "model": "gemma-2-9b-it",
+    "parameter_size": "9B",
+    "provider": "Google Gemini API (Google AI Studio)",
+    "framework": "google-genai (Python SDK chinh thuc hien tai, thay cho google-generativeai da bi deprecated)",
+    "used_by": ["coordinator.py (case narrative generation only)"],
+    "not_used_by": [
+      "customer_agent.py", "order_product_agent.py", "payment_agent.py",
+      "delivery_agent.py", "policy_engine.py", "verifier.py"
+    ],
+    "note": "LLM chi sinh doan dien giai ngon ngu tu nhien, log vao trace.jsonl. Toan bo so lieu/quyet dinh nghiep vu (join du lieu, delivery variance, payment reconciliation, ap dung EC_POLICY_V2, verify schema) la code Python thuan (pandas + rule engine), khong phu thuoc do chinh xac cua model 9B."
+  },
+  "framework": {
+    "orchestration": "Python thuan (khong dung LangGraph/CrewAI) - ThreadPoolExecutor cho case-level parallel fan-out, ham thuan cho intra-case DAG",
+    "data_processing": "pandas",
+    "env_management": "python-dotenv (doc GEMINI_API_KEY tu .env, khong commit)"
+  },
+  "runtime": {
+    "language": "Python",
+    "python_version": "3.10+",
+    "entry_point": "main.py",
+    "run_command": "python main.py --workers 5",
+    "dry_run_command": "python main.py --no-llm --workers 5",
+    "dependencies_file": "requirements.txt"
+  },
+  "architecture_summary": {
+    "pattern": "Case-level parallel fan-out + intra-case DAG (Customer/Order&Product song song -> Router theo order_status -> Payment/Delivery -> Policy -> Verifier) + Evaluator-Optimizer (Verifier auto-trim va re-check truoc khi ghi file)",
+    "agents": ["Coordinator (Router)", "Customer Agent", "Order & Product Agent",
+               "Payment Agent", "Delivery Agent", "Policy Agent (rule engine)",
+               "Verifier Agent (rule engine)"],
+    "detail_doc": "architecture.md"
+  },
+  "dataset": {
+    "source": "Kaggle - Brazilian E-Commerce Public Dataset by Olist",
+    "url": "https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce"
+  },
+  "run_result": {
+    "total_cases": 50,
+    "cases_ok": 50,
+    "cases_failed": 0,
+    "note": "50/50 case pass Verifier (toan bo logic nghiep vu - join du lieu, delivery variance, payment reconciliation, policy rule - da duoc kiem chung day du). Phan LLM (Gemma-2-9B-It qua google-genai SDK) da chay toi dung tang mang that nhung bi proxy cua sandbox phat trien chan (403, khong lien quan toi key hay code - xem architecture.md muc 7). Chay lai 'python main.py --workers 5' tren may co mang that (khong bi chan generativelanguage.googleapis.com) de co du trace.llm_call voi output that tu Gemma-2-9B-It."
+  },
+  "generated_at": "2026-08-05"
+}
