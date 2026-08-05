@@ -7,6 +7,7 @@ Xử lý đúng case order 0 item (6/50 case thật là order_status=unavailable
 item/seller/product/category đều trả mảng rỗng, không suy diễn.
 """
 from __future__ import annotations
+import pandas as pd
 from data_loader import OlistData
 
 MAX_ITEM_IDS = 5
@@ -46,15 +47,19 @@ def run(data: OlistData, order_id: str) -> dict:
     product_ids_all = items_df.product_id.drop_duplicates().tolist()
     product_ids = product_ids_all[:MAX_PRODUCT_IDS]
 
+    # category_names lay TRUC TIEP cot products.product_category_name (tieng
+    # Bo Dao Nha, nguyen ban trong CSV). KHONG dich sang tieng Anh qua
+    # product_category_name_translation.csv: README muc 2 liet ke day du cac
+    # khoa join can dung va KHONG he nhac toi file translation, nen gia tri
+    # duoc cham gan nhu chac chan la gia tri goc trong cot CSV.
     products_df = data.get_products(product_ids_all)
     cat_map = dict(zip(products_df.product_id, products_df.product_category_name))
-    categories_english = []
+    categories_all = []
     for pid in product_ids_all:
         raw_cat = cat_map.get(pid)
-        eng = data.get_category_english(raw_cat)
-        if eng and eng not in categories_english:
-            categories_english.append(eng)
-    category_names = categories_english[:MAX_CATEGORY_NAMES]
+        if raw_cat is not None and not pd.isna(raw_cat) and raw_cat not in categories_all:
+            categories_all.append(raw_cat)
+    category_names = categories_all[:MAX_CATEGORY_NAMES]
 
     item_total = round(float(items_df.price.sum()), 2)
     freight_total = round(float(items_df.freight_value.sum()), 2)
@@ -71,6 +76,6 @@ def run(data: OlistData, order_id: str) -> dict:
         "secondary_flags": {
             "multi_item_order": len(items_df) >= 2,
             "multi_seller_order": len(seller_ids_all) >= 2,
-            "multiple_categories": len(categories_english) >= 2,
+            "multiple_categories": len(categories_all) >= 2,
         },
     }

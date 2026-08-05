@@ -23,10 +23,19 @@ MAX_EVIDENCE = 20
 
 
 def _order_status_needs_delivery(order_status: str) -> bool:
-    """Router: chi goi Delivery Agent khi order da delivered.
-    canceled/unavailable gan nhu chac chan khong co delivered_customer_date
-    (kiem chung tren toan dataset Olist: 6/1234)."""
-    return order_status == "delivered"
+    """Router: LUON goi Delivery Agent cho moi order_status.
+
+    Truoc day Router bo qua Delivery Agent voi canceled/unavailable de tiet
+    kiem 1 luot goi. Kiem chung lai tren 50 case that cho thay day la SAI:
+    ca 14 case canceled/unavailable deu CO order_estimated_delivery_date thuc
+    trong CSV, EC_047 con co ca order_delivered_carrier_date, va 8 case
+    canceled co item row nen bat buoc phai co seller_handoff_analysis
+    (README muc 4 chi cho phep de mang rong khi order KHONG co item row).
+    Bo qua Delivery Agent lam mat het du lieu nay -> xuat null sai.
+
+    Giu ham nay de Coordinator van ghi ro quyet dinh vao trace, nhung khong
+    con bo qua agent nao nua."""
+    return True
 
 
 def process_case(case: dict, data: OlistData, call_llm: bool = True) -> dict:

@@ -171,6 +171,33 @@ không cần thêm `verify_refund_completion`.
 xuất hiện đúng 14/50 lần = đúng bằng tổng số case `canceled` (8) +
 `unavailable` (6) — khớp tuyệt đối.
 
+## 7.3 Hai lỗi làm mất điểm nặng đã sửa (sau khi có kết quả chấm 7.63)
+
+Kết quả chấm lần đầu cho thấy 2 mục thấp bất thường: **Giao vận 6.76** và
+**Ngữ cảnh KH/sản phẩm 6.85**. Truy nguyên:
+
+**(a) Router bỏ qua Delivery Agent — sai nghiêm trọng.** Giả định ban đầu
+("order canceled/unavailable không có dữ liệu giao vận") bị dữ liệu thật bác
+bỏ: cả **14/14** case canceled/unavailable đều CÓ
+`order_estimated_delivery_date` thực trong CSV; `EC_047` còn có cả
+`order_delivered_carrier_date`; và 8 case canceled có item row nên bắt buộc
+phải có `seller_handoff_analysis` (README mục 4 chỉ cho phép để mảng rỗng khi
+order **không có item row**, không phải theo `order_status`). Bỏ qua agent
+làm 28% số case xuất `null`/mảng rỗng sai. **Đã sửa: Delivery Agent luôn chạy
+cho mọi `order_status`.** Đây là bài học: tối ưu dựa trên giả định thống kê
+mà không kiểm chứng từng trường bắt buộc của schema thì lợi bất cập hại.
+
+**(b) `category_names` dịch sang tiếng Anh — nhiều khả năng sai.** Code cũ
+join `product_category_name_translation.csv` để đổi `beleza_saude` →
+`health_beauty`. Nhưng README mục 2 liệt kê đầy đủ các khoá join cần dùng và
+**không hề nhắc** tới file translation; cột gốc trong `products.csv` là
+`product_category_name` (tiếng Bồ Đào Nha). **Đã sửa: lấy trực tiếp giá trị
+gốc trong CSV**, không dịch. (`multiple_categories` không đổi vì ánh xạ 1:1.)
+
+Đã kiểm chứng thêm: `related_order_ids` không phải nguyên nhân — toàn bộ 50
+case có tối đa 2 related order và thứ tự theo `orders.csv` trùng khớp thứ tự
+theo `order_purchase_timestamp`.
+
 ## 7. Giới hạn đã biết
 
 - **Không chạy được LLM thật trong môi trường build này** (sandbox chặn
