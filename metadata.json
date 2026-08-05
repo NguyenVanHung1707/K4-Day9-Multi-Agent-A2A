@@ -1,12 +1,11 @@
 {
-  "model": "gemini-3.5-flash-lite",
-  "provider": "Google Gemini API",
-  "parameter_size": "undisclosed by Google",
-  "parameter_limit_compliance": "not independently verifiable",
-  "framework": "custom structured multi-agent pipeline with google-genai batch review agent",
+  "model": "deterministic-rule-engine",
+  "provider": "none",
+  "parameter_size": "0 parameters",
+  "parameter_limit_compliance": "compliant: 0 parameters is below the 10B limit",
+  "framework": "custom deterministic multi-agent pipeline",
   "runtime": "Python 3.12",
   "policy_version": "EC_POLICY_V2",
-  "generation_mode": "deterministic CSV analysis plus fail-closed Gemini batch policy review",
-  "notes": "Gemini reviews all 50 structured case facts in one request but cannot create or overwrite entity IDs, timestamps, monetary calculations, evidence, refunds, or policy output."
+  "generation_mode": "deterministic CSV analysis with fail-closed schema and evidence verification",
+  "notes": "No neural model is used. All results are reproducibly derived from Olist CSV facts and EC_POLICY_V2."
 }
-

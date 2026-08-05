@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from src.agents import CustomerAgent, DeliveryAgent, OrderProductAgent, PaymentAgent, PolicyAgent, VerifierAgent
-from src.agents.gemini_review import GeminiReviewAgent
 from src.config import (
     MAX_ACTIONS, MAX_CATEGORIES, MAX_EVIDENCE, MAX_ITEMS, MAX_PAYMENTS,
     MAX_PRODUCTS, MAX_SELLERS, POLICY_VERSION,
@@ -17,7 +16,6 @@ class Coordinator:
         self,
         repository: DataRepository,
         trace: TraceWriter,
-        gemini_review_agent: GeminiReviewAgent | None = None,
     ):
         self.repository = repository
         self.trace = trace
@@ -26,7 +24,6 @@ class Coordinator:
         self.payment_agent = PaymentAgent(repository)
         self.delivery_agent = DeliveryAgent()
         self.policy_agent = PolicyAgent()
-        self.gemini_review_agent = gemini_review_agent
         self.verifier_agent = VerifierAgent(repository)
 
     def process(self, case: dict) -> dict:
@@ -60,14 +57,6 @@ class Coordinator:
             "primary_issue": policy["primary_issue"],
             "recommended_refund_brl": policy["recommended_refund_brl"],
         })
-
-        if self.gemini_review_agent is not None:
-            review = self.gemini_review_agent.review(case, order, customer, payment, delivery, policy)
-            self.trace.write(case_id, self.gemini_review_agent.name, "review_agreed", {
-                "model": self.gemini_review_agent.model_name,
-                "primary_issue": review["primary_issue"],
-                "cause_code": review["cause_code"],
-            })
 
         output = self._compose(case_id, order_id, customer, order, payment, delivery, policy)
         verified = self.verifier_agent.verify(case, output)
@@ -123,4 +112,3 @@ class Coordinator:
             "financial_resolution": {"currency": "BRL", "recommended_refund_brl": policy["recommended_refund_brl"]},
             "resolution_actions": policy["resolution_actions"][:MAX_ACTIONS],
         }
-

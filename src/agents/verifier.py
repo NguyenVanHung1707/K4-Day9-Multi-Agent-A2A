@@ -73,6 +73,48 @@ class VerifierAgent:
 
         if not output["resolution_actions"]:
             errors.append("missing primary action")
+
+        primary = output["case_assessment"]["primary_issue"]
+        secondary = output["case_assessment"]["secondary_issues"]
+        main_actions = {
+            "canceled_order_paid": "issue_full_refund",
+            "unavailable_order_paid": "issue_full_refund",
+            "late_delivery_seller": "refund_freight",
+            "late_delivery_logistics": "refund_freight",
+            "valid_split_payment": "explain_valid_split_payment",
+            "unsupported_late_claim": "reject_late_refund",
+        }
+        expected_actions = [main_actions.get(primary)]
+        if primary == "late_delivery_seller":
+            expected_actions.append("review_seller_handoff")
+        elif primary == "late_delivery_logistics":
+            expected_actions.append("review_carrier_delay")
+        if refund > 0:
+            expected_actions.append("verify_refund_completion")
+        if "multi_seller_order" in secondary:
+            expected_actions.append("coordinate_multi_seller_case")
+        if "split_payment" in secondary and primary != "valid_split_payment":
+            expected_actions.append("verify_payment_allocation")
+        if output["resolution_actions"] != expected_actions:
+            errors.append("resolution_actions disagree with policy or required order")
+
+        cause_rows = output["root_cause_analysis"]["ranked_causes"]
+        if cause_rows:
+            expected_evidence = [f"order:{order_id}"]
+            expected_evidence.extend(
+                f"item:{item_id}" for item_id in output["affected_entities"]["item_ids"]
+            )
+            expected_evidence.extend(
+                f"payment:{payment_id}" for payment_id in output["affected_entities"]["payment_ids"]
+            )
+            expected_evidence.extend(
+                f'seller:{party["party_id"]}'
+                for party in output["root_cause_analysis"]["responsible_parties"]
+                if party["party_type"] == "seller"
+            )
+            expected_evidence.append(f'policy:{cause_rows[0]["cause_code"]}')
+            if output["evidence_ids"] != expected_evidence[:MAX_EVIDENCE]:
+                errors.append("evidence_ids are incomplete, extra, or out of required order")
         if len(output["root_cause_analysis"]["ranked_causes"]) > 3:
             errors.append("too many root causes")
         if len(output["root_cause_analysis"]["responsible_parties"]) > 3:
@@ -81,4 +123,3 @@ class VerifierAgent:
         if errors:
             raise VerificationError("; ".join(errors))
         return output
-

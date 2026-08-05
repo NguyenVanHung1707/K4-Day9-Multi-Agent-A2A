@@ -2,7 +2,7 @@
 
 ## 1. Mục tiêu
 
-Hệ thống xử lý từng `EC_*.json` bằng dữ liệu kiểm chứng được trong Olist CSV. Không agent nào được tạo ID, timestamp, payment hoặc sự kiện không có trong nguồn. Case không khớp `EC_POLICY_V2`, evidence sai, hoặc Gemini review mâu thuẫn với policy xác định đều bị dừng thay vì sinh kết quả suy đoán.
+Hệ thống xử lý từng `EC_*.json` bằng dữ liệu kiểm chứng được trong Olist CSV. Không agent nào được tạo ID, timestamp, payment hoặc sự kiện không có trong nguồn. Case không khớp `EC_POLICY_V2`, evidence sai hoặc action không đúng thứ tự policy đều bị dừng thay vì sinh kết quả suy đoán.
 
 ## 2. Sơ đồ agent và handoff
 
@@ -21,12 +21,7 @@ Coordinator Agent (per case)
                                                |
                                                v
                                         Verifier Agent
-                                               |
-                      50 verified candidates batched once
-                                               |
-                                               v
-                                  Gemini Batch Review Agent
-                                       | agree      | conflict
+                                       | pass       | conflict
                                        v            v
                                   50 JSON files    reject run
 ```
@@ -42,9 +37,8 @@ Coordinator Agent (per case)
 | Delivery | Delivery/seller handoff variance | handoff Order | timestamps và late sellers |
 | Policy | Áp dụng thứ tự `EC_POLICY_V2` | Structured handoff | candidate issue, cause, party, refund, actions |
 | Verifier | Kiểm tra source IDs, schema và giới hạn | Draft và repository read-only | verified candidate hoặc lỗi |
-| Gemini Batch Review | Đánh giá độc lập 50 candidate theo facts | Tóm tắt facts đã xác minh | 50 structured reviews hoặc conflict |
 
-`DataRepository` load CSV một lần và cung cấp index read-only. Gemini không nhận API key trong prompt, không đọc CSV trực tiếp và không có quyền sửa handoff.
+`DataRepository` load CSV một lần và cung cấp index read-only. Các agent chỉ nhận phần dữ liệu và handoff cần thiết cho vai trò của mình.
 
 ## 4. Contract và chống hallucination
 
@@ -52,32 +46,24 @@ Coordinator Agent (per case)
 - Tiền được tính bằng `Decimal`, làm tròn hai chữ số.
 - Timestamp so sánh trực tiếp theo giá trị CSV, không đổi timezone.
 - Order không có item có `expected_total_brl`, `difference_brl`, `reconciled` bằng `null`.
-- Gemini chạy temperature 0 và bắt buộc trả JSON theo schema.
-- Batch phải có đúng một review cho mỗi case ID.
-- Gemini phải đồng ý chính xác về primary issue, cause, responsible IDs và refund; khác biệt làm cả lượt chạy fail.
 - Evidence được đối chiếu ngược với repository.
-- File output được ghi atomically sau khi toàn bộ deterministic checks và Gemini batch review pass.
-
-Batching 50 case vào một request giúp tuân thủ quota free tier 5 requests/phút nhưng vẫn giữ một review record riêng cho từng case.
+- Action được dựng lại độc lập từ primary issue, secondary issues và refund để kiểm tra cả nội dung lẫn thứ tự.
+- File output được ghi atomically chỉ sau khi toàn bộ deterministic checks pass.
 
 ## 5. Trace và lỗi
 
-`trace.jsonl` được truncate ở đầu mỗi lượt chạy. Lượt chạy Gemini thành công có 400 event phân tích xác định và 50 event `gemini_review_agent/review_agreed`. Trace chỉ chứa model, case ID và kết luận audit; không chứa API key. Lỗi API, JSON sai schema, thiếu case hoặc kết luận mâu thuẫn làm pipeline trả exit code 1.
+`trace.jsonl` được truncate ở đầu mỗi lượt chạy. Trace ghi handoff và kết luận của từng agent cho đủ 50 case. Lỗi dữ liệu, evidence sai, action sai hoặc schema không hợp lệ làm pipeline trả exit code 1.
 
 ## 6. Model và bảo mật
 
-- Provider: Google Gemini API.
-- Model: `gemini-3.5-flash-lite`.
-- `gemini-2.5-flash` ban đầu được cân nhắc nhưng API trả `404` vì không còn cấp cho user mới; pipeline chuyển sang model Flash ổn định khả dụng cho key.
-- Parameter size: Google không công bố; khả năng đáp ứng giới hạn ≤10B không thể xác minh độc lập và được ghi rõ trong `metadata.json`.
-- Secret: `GEMINI_API_KEY` chỉ nằm trong `.env`, file này bị Git ignore.
+- Provider: không có; pipeline không gọi dịch vụ AI bên ngoài.
+- Model: `deterministic-rule-engine`.
+- Parameter size: `0 parameters`, đáp ứng rõ ràng giới hạn ≤10B.
+- Tất cả phép join, tính tiền, thời gian, policy và verification đều tái lập được từ dữ liệu nguồn.
 
 ## 7. Cách chạy
 
 ```powershell
-pip install -r requirements.txt
-python -m src.main --use-gemini
+python -m src.main
 python -m unittest discover -s tests -v
 ```
-
-Chế độ `python -m src.main` không gọi API, chỉ dành cho phát triển. Trace dùng để nộp/audit phải được tạo bởi lệnh có `--use-gemini`.

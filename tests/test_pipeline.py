@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import json
 import unittest
+from copy import deepcopy
 from decimal import Decimal
 
 from src.agents.policy import PolicyAgent
+from src.agents.verifier import VerificationError, VerifierAgent
 from src.config import DATA_DIR, INPUT_DIR, OUTPUT_DIR, TRACE_PATH
 from src.main import run_pipeline
+from src.repository import DataRepository
 from src.utils import money, stable_unique, variance_hours
 
 
@@ -62,6 +65,22 @@ class EndToEndTests(unittest.TestCase):
         for path in outputs:
             document = json.loads(path.read_text(encoding="utf-8"))
             self.assertEqual(document["case_id"], path.stem)
+
+    def test_verifier_rejects_action_or_evidence_tampering(self):
+        run_pipeline(DATA_DIR, INPUT_DIR, OUTPUT_DIR, TRACE_PATH)
+        case = json.loads((INPUT_DIR / "EC_002.json").read_text(encoding="utf-8"))
+        document = json.loads((OUTPUT_DIR / "EC_002.json").read_text(encoding="utf-8"))
+        verifier = VerifierAgent(DataRepository(DATA_DIR))
+
+        bad_actions = deepcopy(document)
+        bad_actions["resolution_actions"] = list(reversed(bad_actions["resolution_actions"]))
+        with self.assertRaisesRegex(VerificationError, "resolution_actions"):
+            verifier.verify(case, bad_actions)
+
+        bad_evidence = deepcopy(document)
+        bad_evidence["evidence_ids"].pop()
+        with self.assertRaisesRegex(VerificationError, "evidence_ids"):
+            verifier.verify(case, bad_evidence)
 
 
 if __name__ == "__main__":
