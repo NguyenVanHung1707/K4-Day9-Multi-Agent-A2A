@@ -65,45 +65,38 @@ class FastCoordinatorAgent:
         return final_output, trace
 
 
-def create_submission_zips(output_dir: str, base_dir: str):
+def create_submission_zip_from_dir(src_dir: str, zip_path: str):
     """
-    Creates output.zip and output_v2.zip containing output/EC_001.json to output/EC_050.json.
+    Creates submission zip file containing output/EC_001.json ... output/EC_050.json
+    from the specified source directory.
     """
-    json_files = sorted(glob.glob(os.path.join(output_dir, "*.json")))
+    json_files = sorted(glob.glob(os.path.join(src_dir, "*.json")))
 
-    # Write output.zip
-    zip1 = os.path.join(base_dir, "output.zip")
-    with zipfile.ZipFile(zip1, "w", zipfile.ZIP_DEFLATED) as zipf:
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
         for fpath in json_files:
             zipf.write(fpath, f"output/{os.path.basename(fpath)}")
 
-    # Write output_v2.zip
-    zip2 = os.path.join(base_dir, "output_v2.zip")
-    with zipfile.ZipFile(zip2, "w", zipfile.ZIP_DEFLATED) as zipf:
-        for fpath in json_files:
-            zipf.write(fpath, f"output/{os.path.basename(fpath)}")
-
-    print(f"Created submission zips successfully: output.zip and output_v2.zip")
+    print(f"Created submission zip: {zip_path}")
 
 
-def rebuild_all():
+def rebuild_version(version_name: str = "output_v2"):
     base_dir = os.path.dirname(os.path.abspath(__file__))
     data_dir = os.path.join(base_dir, "data")
     input_dir = os.path.join(base_dir, "input")
-    output_dir = os.path.join(base_dir, "output")
-    trace_path = os.path.join(base_dir, "trace.jsonl")
-    metadata_path = os.path.join(base_dir, "metadata.json")
+    target_out_dir = os.path.join(base_dir, version_name)
+    trace_path = os.path.join(base_dir, f"trace_{version_name}.jsonl")
+    metadata_path = os.path.join(base_dir, f"metadata_{version_name}.json")
 
-    os.makedirs(output_dir, exist_ok=True)
+    os.makedirs(target_out_dir, exist_ok=True)
 
-    print("Initializing Fast DataEngine...")
+    print(f"Initializing DataEngine for version {version_name}...")
     data_engine = DataEngine(data_dir=data_dir)
     coordinator = FastCoordinatorAgent(data_engine=data_engine)
 
     all_traces = []
     start_time = time.time()
 
-    print("Fast rebuilding output files for all 50 cases...")
+    print(f"Building versioned output files in {version_name}/ for all 50 cases...")
     for i in range(1, 51):
         case_file = f"EC_{i:03d}.json"
         case_path = os.path.join(input_dir, case_file)
@@ -118,7 +111,7 @@ def rebuild_all():
 
         output_data, trace_steps = coordinator.process_case(case_input)
 
-        out_file_path = os.path.join(output_dir, case_file)
+        out_file_path = os.path.join(target_out_dir, case_file)
         with open(out_file_path, "w", encoding="utf-8") as f:
             json.dump(output_data, f, indent=2, ensure_ascii=False)
 
@@ -162,11 +155,17 @@ def rebuild_all():
     with open(metadata_path, "w", encoding="utf-8") as f:
         json.dump(metadata_content, f, indent=2, ensure_ascii=False)
 
-    create_submission_zips(output_dir, base_dir)
+    zip_filename = f"{version_name}.zip"
+    zip_path = os.path.join(base_dir, zip_filename)
+    create_submission_zip_from_dir(target_out_dir, zip_path)
 
-    print(f"Fast rebuild completed in {total_time}s!")
-    print(f"50 Output JSON files updated in {output_dir}/")
+    # Also keep output.zip updated to point to latest version zip
+    create_submission_zip_from_dir(target_out_dir, os.path.join(base_dir, "output.zip"))
+
+    print(f"Rebuild completed for {version_name} in {total_time}s!")
+    print(f"50 JSON files written to {target_out_dir}/")
+    print(f"Submission zip created: {zip_path}")
 
 
 if __name__ == "__main__":
-    rebuild_all()
+    rebuild_version("output_v2")
