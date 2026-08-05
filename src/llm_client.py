@@ -1,7 +1,6 @@
 """
-LLM API Client module for Qwen/Qwen2.5-7B-Instruct.
-Supports OpenAI-compatible API providers (OpenRouter, Groq, vLLM, Ollama, Together AI, etc.).
-Reads API Key from .env per rule 4.
+LLM API Client module for OpenAI gpt-4o-mini.
+Reads OPENAI_API_KEY from .env per competition rules.
 """
 
 import os
@@ -14,15 +13,25 @@ from src.config import MODEL_NAME
 class LLMClient:
     def __init__(self, model_name: str = MODEL_NAME):
         self.model_name = model_name
-        self.api_key = os.getenv("LLM_API_KEY") or os.getenv("OPENAI_API_KEY") or ""
-        self.base_url = os.getenv("LLM_BASE_URL") or "https://api.groq.com/openai/v1"
+        self._load_dotenv()
+        self.api_key = os.getenv("OPENAI_API_KEY") or os.getenv("LLM_API_KEY") or ""
+        self.base_url = os.getenv("LLM_BASE_URL") or "https://api.openai.com/v1"
 
-    def call_qwen_agent(self, system_prompt: str, user_prompt: str) -> Optional[str]:
+    def _load_dotenv(self):
+        env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
+        if os.path.exists(env_path):
+            with open(env_path, encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#") and "=" in line:
+                        k, v = line.split("=", 1)
+                        os.environ[k.strip()] = v.strip().strip("'\"")
+
+    def call_agent(self, system_prompt: str, user_prompt: str) -> Optional[str]:
         """
-        Sends an HTTP POST request to OpenAI-compatible LLM endpoint.
+        Sends an HTTP POST request to OpenAI API chat completions.
         """
-        if not self.api_key and "localhost" not in self.base_url:
-            # If no API key provided, return None to trigger safe deterministic fallback
+        if not self.api_key:
             return None
 
         url = f"{self.base_url.rstrip('/')}/chat/completions"
@@ -43,10 +52,9 @@ class LLMClient:
 
         try:
             req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers=headers, method="POST")
-            with urllib.request.urlopen(req, timeout=10) as resp:
+            with urllib.request.urlopen(req, timeout=15) as resp:
                 result = json.loads(resp.read().decode("utf-8"))
                 return result["choices"][0]["message"]["content"]
         except Exception as e:
-            # Log error and fallback silently to policy engine
             print(f"[LLMClient Warning] API call to {self.model_name} failed: {e}. Falling back to Policy Engine.")
             return None

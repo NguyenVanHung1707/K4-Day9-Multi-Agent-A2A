@@ -4,7 +4,7 @@
 
 Hệ thống được thiết kế theo mô hình **Multi-Agent phối hợp có kiểm chứng (Coordinated Specialist Agents with Deterministic Verification)**. Mỗi agent đảm nhận một nhiệm vụ chuyên biệt trong quy trình điều tra khiếu nại (Dispute Investigation Pipeline). 
 
-Do yêu cầu cuộc thi quy định các LLM model phải **$\le$ 10B parameters** (ví dụ: Qwen2.5-7B-Instruct, Llama-3.1-8B-Instruct), hệ thống áp dụng nguyên tắc **Hybrid Agent Architecture**:
+Do yêu cầu cuộc thi quy định các LLM model phải **$\le$ 10B parameters** (ví dụ: OpenAI `gpt-4o-mini`, Qwen2.5-7B-Instruct, Llama-3.1-8B-Instruct), hệ thống áp dụng nguyên tắc **Hybrid Agent Architecture**:
 - **Deterministic Data Tools Layer (Pandas/SQL Engine)**: Đảm nhận trích xuất dữ liệu thô, join bảng, và tính toán số học chính xác (thời gian, tiền tệ) để tránh lỗi ảo giác (hallucination) và sai sót tính toán của LLM < 10B.
 - **LLM Reasoning & Policy Layer**: Đảm nhận suy luận logic theo quy tắc `EC_POLICY_V2`, phân loại nguyên nhân gốc rễ, xác định bên chịu trách nhiệm và lập luận đưa ra bằng chứng.
 - **Deterministic Verifier Guardrail**: Kiểm định tính hợp lệ của JSON Schema, giới hạn mảng (array limits) và tính nhất quán dữ liệu trước khi hoàn tất output.
