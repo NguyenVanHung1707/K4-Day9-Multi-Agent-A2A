@@ -35,7 +35,7 @@ class DataEngine:
         self.payments_by_order = self.df_payments.groupby("order_id")
         self.products_by_id = self.df_products.set_index("product_id").to_dict("index")
         
-        # Customer unique ID to order_ids map (preserving exact CSV source order)
+        # Customer unique ID to order_ids map (preserving source CSV order)
         orders_with_cust = self.df_orders.merge(self.df_customers[['customer_id', 'customer_unique_id']], on='customer_id', how='left')
         self.orders_by_unique_cust = orders_with_cust.groupby("customer_unique_id")["order_id"].apply(list).to_dict()
 
@@ -168,16 +168,21 @@ class DataEngine:
         if delivered_at_dt and estimated_at_dt:
             delivery_variance_hours = round((delivered_at_dt - estimated_at_dt).total_seconds() / 3600.0, 2)
 
-        # Handoff variance & Seller analysis
+        # Handoff variance & Seller analysis (always construct for all sellers when has_items is True)
         seller_handoff_analysis = []
         late_handoff_seller_ids = []
 
-        if has_items and carrier_handoff_at_dt:
+        if has_items:
             for sid in seller_ids_ordered:
                 ship_lim_dt = seller_shipping_limits.get(sid)
                 if ship_lim_dt:
-                    variance_h = round((carrier_handoff_at_dt - ship_lim_dt).total_seconds() / 3600.0, 2)
-                    is_late = carrier_handoff_at_dt > ship_lim_dt
+                    if carrier_handoff_at_dt:
+                        variance_h = round((carrier_handoff_at_dt - ship_lim_dt).total_seconds() / 3600.0, 2)
+                        is_late = carrier_handoff_at_dt > ship_lim_dt
+                    else:
+                        variance_h = None
+                        is_late = False
+
                     seller_handoff_analysis.append({
                         "seller_id": sid,
                         "shipping_limit_at": self.format_dt(ship_lim_dt),
