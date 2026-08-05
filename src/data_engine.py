@@ -35,10 +35,9 @@ class DataEngine:
         self.payments_by_order = self.df_payments.groupby("order_id")
         self.products_by_id = self.df_products.set_index("product_id").to_dict("index")
         
-        # Customer unique ID to order_ids map (sorted chronologically by order_purchase_timestamp ascending)
+        # Customer unique ID to order_ids map (preserving exact CSV source order)
         orders_with_cust = self.df_orders.merge(self.df_customers[['customer_id', 'customer_unique_id']], on='customer_id', how='left')
-        orders_with_cust_sorted = orders_with_cust.sort_values(by='order_purchase_timestamp', ascending=True)
-        self.orders_by_unique_cust = orders_with_cust_sorted.groupby("customer_unique_id")["order_id"].apply(list).to_dict()
+        self.orders_by_unique_cust = orders_with_cust.groupby("customer_unique_id")["order_id"].apply(list).to_dict()
 
         # Translation map
         self.category_translation = dict(zip(self.df_translation['product_category_name'], self.df_translation['product_category_name_english']))
@@ -72,7 +71,7 @@ class DataEngine:
         estimated_at_dt = self.parse_dt(order_row.get("order_estimated_delivery_date"))
         carrier_handoff_at_dt = self.parse_dt(order_row.get("order_delivered_carrier_date"))
 
-        # Customer context (sorted chronologically ascending)
+        # Customer context (preserving source CSV order)
         cust_row = self.customers_by_id.get(customer_id, {})
         customer_unique_id = cust_row.get("customer_unique_id", "")
         all_cust_orders = self.orders_by_unique_cust.get(customer_unique_id, [])
@@ -117,7 +116,6 @@ class DataEngine:
             prod_row = self.products_by_id.get(pid, {})
             cat_name_pt = prod_row.get("product_category_name")
             if cat_name_pt and not pd.isna(cat_name_pt):
-                # Use raw Portuguese category_name directly from products.csv
                 if cat_name_pt not in category_names:
                     category_names.append(cat_name_pt)
 
