@@ -17,5 +17,5 @@
   "runtime": "Python 3.11",
   "max_parameter_limit": "<= 10B",
   "total_cases_processed": 50,
-  "total_execution_time_seconds": 2.74
+  "total_execution_time_seconds": 1076.82
 }
