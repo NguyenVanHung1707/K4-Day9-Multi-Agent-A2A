@@ -8,89 +8,73 @@ Tài liệu này mô tả chi tiết luồng xử lý thực thi (Execution Work
 
 ```mermaid
 flowchart TD
-    %% Styling & Theme Setup
-    classDef inputStyle fill:#e1f5fe,stroke:#0288d1,stroke-width:2px,color:#01579b;
-    classDef engineStyle fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#e65100;
-    classDef agentStyle fill:#e8f5e9,stroke:#388e3c,stroke-width:2px,color:#1b5e20;
-    classDef policyStyle fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#4a148c;
-    classDef verifierStyle fill:#ffebee,stroke:#d32f2f,stroke-width:2px,color:#b71c1c;
-    classDef outputStyle fill:#ede7f6,stroke:#512da8,stroke-width:2px,color:#311b92;
-    classDef modelBadge fill:#263238,stroke:#37474f,stroke-width:1px,color:#ffffff;
+    classDef inputStyle fill:#e1f5fe,stroke:#0288d1,stroke-width:2px,color:#01579b
+    classDef engineStyle fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#e65100
+    classDef agentStyle fill:#e8f5e9,stroke:#388e3c,stroke-width:2px,color:#1b5e20
+    classDef policyStyle fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#4a148c
+    classDef verifierStyle fill:#ffebee,stroke:#d32f2f,stroke-width:2px,color:#b71c1c
+    classDef outputStyle fill:#ede7f6,stroke:#512da8,stroke-width:2px,color:#311b92
+    classDef modelBadge fill:#263238,stroke:#37474f,stroke-width:1px,color:#ffffff
 
-    %% Subgraph 1: Input & Data Preparation
-    subgraph Phase1["PHASE 1: Khởi Tạo & Trích Xuất Dữ Liệu Chính Xác (Deterministic Data Engine)"]
-        A["Input Case File: input/EC_xxx.json"] ::: inputStyle
-        B["DataEngine: Nạp 9 CSV Olist trong data/"] ::: engineStyle
-        C["Tính Toán Số Liệu Số Học Chuẩn Xác:
-        - delivery_variance_hours
-        - handoff_variance_hours
-        - expected_total_brl & difference_brl
-        - reconciled (abs diff <= 0.10)"] ::: engineStyle
+    subgraph Phase1 ["PHASE 1: Data Extraction"]
+        A["Input Case File: input/EC_xxx.json"]:::inputStyle
+        B["DataEngine: Load 9 CSV Olist Datasets"]:::engineStyle
+        C["Calculations:<br/>- delivery_variance_hours<br/>- handoff_variance_hours<br/>- expected_total_brl and difference_brl<br/>- reconciled flag"]:::engineStyle
     end
 
-    %% Subgraph 2: Domain Agents
-    subgraph Phase2["PHASE 2: Domain Analysis (Phân Phối Cho Các Chuyên Gia Tên Miền)"]
-        D1["CustomerAgent
-        (Phân tích lịch sử khách hàng)"] ::: agentStyle
-        M1["Model: llama-3.1-8b-instant (Groq API - 8B)"] ::: modelBadge
+    subgraph Phase2 ["PHASE 2: Domain Analysis"]
+        D1["CustomerAgent<br/>Customer History Analysis"]:::agentStyle
+        M1["Model: llama-3.1-8b-instant"]:::modelBadge
 
-        D2["OrderProductAgent
-        (Trích xuất items, products, categories)"] ::: agentStyle
-        M2["Model: llama-3.1-8b-instant (Groq API - 8B)"] ::: modelBadge
+        D2["OrderProductAgent<br/>Items Products Sellers"]:::agentStyle
+        M2["Model: llama-3.1-8b-instant"]:::modelBadge
 
-        D3["PaymentAgent
-        (Đối soát thanh toán & Split Payment)"] ::: agentStyle
-        M3["Model: llama-3.1-8b-instant (Groq API - 8B)"] ::: modelBadge
+        D3["PaymentAgent<br/>Payment Reconciliation"]:::agentStyle
+        M3["Model: llama-3.1-8b-instant"]:::modelBadge
 
-        D4["DeliveryAgent
-        (Phân tích mốc thời gian & Trễ Seller/Vận chuyển)"] ::: agentStyle
-        M4["Model: llama-3.1-8b-instant (Groq API - 8B)"] ::: modelBadge
+        D4["DeliveryAgent<br/>Delivery Handoff Analysis"]:::agentStyle
+        M4["Model: llama-3.1-8b-instant"]:::modelBadge
     end
 
-    %% Subgraph 3: Policy Agent Reasoning
-    subgraph Phase3["PHASE 3: Policy Agent (Suy Luận Cây Ưu Tiên EC_POLICY_V2)"]
-        P1["PolicyAgent: Đánh Giá Cây Ưu Tiên EC_POLICY_V2
-        1. canceled_order_paid (Hoàn 100%)
-        2. unavailable_order_paid (Hoàn 100%)
-        3. late_delivery_seller (Hoàn Freight)
-        4. late_delivery_logistics (Hoàn Freight)
-        5. valid_split_payment (Giải thích, Hoàn 0)
-        6. unsupported_late_claim (Bác bỏ, Hoàn 0)"] ::: policyStyle
-        M5["Model: llama-3.1-8b-instant (Groq API - 8B <= 10B)"] ::: modelBadge
+    subgraph Phase3 ["PHASE 3: Policy Reasoning"]
+        P1["PolicyAgent: EC_POLICY_V2 Tree<br/>1. canceled_order_paid<br/>2. unavailable_order_paid<br/>3. late_delivery_seller<br/>4. late_delivery_logistics<br/>5. valid_split_payment<br/>6. unsupported_late_claim"]:::policyStyle
+        M5["Model: llama-3.1-8b-instant"]:::modelBadge
     end
 
-    %% Subgraph 4: Verification & Guardrails
-    subgraph Phase4["PHASE 4: Verifier Agent (Kiểm Tra Quy Tắc & Rào Chắn Dữ Liệu)"]
-        V1["VerifierAgent: 
-        - Kiểm tra 5 định dạng Regex Evidence ID
-        - Xử lý null khi đơn không có Item
-        - Giới hạn mảng (Max 20 evidence, 5 actions, 3 sellers)
-        - Ép kiểu confidence trong range [0, 1]"] ::: verifierStyle
+    subgraph Phase4 ["PHASE 4: Verification"]
+        V1["VerifierAgent Code Engine<br/>- Regex Evidence Validation<br/>- Null Handling for Empty Items<br/>- Array Length Caps"]:::verifierStyle
     end
 
-    %% Subgraph 5: Output Generation
-    subgraph Phase5["PHASE 5: Đóng Gói & Xuất Kết Quả Nộp Bài"]
-        O1["Ghi file JSON kết quả: output_v3/EC_xxx.json"] ::: outputStyle
-        O2["Ghi nhật ký vết chạy: trace_output_v3.jsonl"] ::: outputStyle
-        O3["Ghi thông số kỹ thuật Model: metadata_output_v3.json"] ::: outputStyle
-        O4["Đóng gói file nộp bài chuẩn Portal: output_v3.zip"] ::: outputStyle
+    subgraph Phase5 ["PHASE 5: Output Archiving"]
+        O1["JSON Result: output_v3/EC_xxx.json"]:::outputStyle
+        O2["Trace Logger: trace_output_v3.jsonl"]:::outputStyle
+        O3["Model Metadata: metadata_output_v3.json"]:::outputStyle
+        O4["Submission Zip: output_v3.zip"]:::outputStyle
     end
 
-    %% Workflow Connections
     A --> B
     B --> C
-    C --> D1 & D2 & D3 & D4
+    C --> D1
+    C --> D2
+    C --> D3
+    C --> D4
     
     D1 --- M1
     D2 --- M2
     D3 --- M3
     D4 --- M4
 
-    D1 & D2 & D3 & D4 --> P1
+    D1 --> P1
+    D2 --> P1
+    D3 --> P1
+    D4 --> P1
     P1 --- M5
 
     P1 --> V1
-    V1 --> O1 & O2 & O3 & O4
+    V1 --> O1
+    V1 --> O2
+    V1 --> O3
+    V1 --> O4
 ```
 
 ---
