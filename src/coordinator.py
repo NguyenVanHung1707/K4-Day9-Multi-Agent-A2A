@@ -12,11 +12,7 @@ from src.tracing import TraceWriter
 class Coordinator:
     name = "coordinator_agent"
 
-    def __init__(
-        self,
-        repository: DataRepository,
-        trace: TraceWriter,
-    ):
+    def __init__(self, repository: DataRepository, trace: TraceWriter):
         self.repository = repository
         self.trace = trace
         self.customer_agent = CustomerAgent(repository)
@@ -32,7 +28,6 @@ class Coordinator:
         if case.get("policy_version") != POLICY_VERSION:
             raise ValueError(f"Unsupported policy version in {case_id}: {case.get('policy_version')}")
         self.trace.write(case_id, self.name, "case_started", {"order_id": order_id})
-
         scope = case.get("investigation_scope", {})
         customer = self.customer_agent.run(order_id, scope.get("include_customer_history", True))
         self.trace.write(case_id, self.customer_agent.name, "handoff", {
@@ -57,7 +52,6 @@ class Coordinator:
             "primary_issue": policy["primary_issue"],
             "recommended_refund_brl": policy["recommended_refund_brl"],
         })
-
         output = self._compose(case_id, order_id, customer, order, payment, delivery, policy)
         verified = self.verifier_agent.verify(case, output)
         self.trace.write(case_id, self.verifier_agent.name, "verification_passed")
@@ -76,33 +70,20 @@ class Coordinator:
         return {
             "case_id": case_id,
             "case_assessment": {
-                "primary_issue": policy["primary_issue"],
-                "secondary_issues": policy["secondary_issues"],
-                "case_status": policy["case_status"],
-                "confidence": policy["confidence"],
+                "primary_issue": policy["primary_issue"], "secondary_issues": policy["secondary_issues"],
+                "case_status": policy["case_status"], "confidence": policy["confidence"],
             },
             "affected_entities": {
-                "order_ids": [order_id],
-                "item_ids": order["item_ids"][:MAX_ITEMS],
-                "seller_ids": order["seller_ids"][:MAX_SELLERS],
-                "payment_ids": payment["payment_ids"][:MAX_PAYMENTS],
+                "order_ids": [order_id], "item_ids": order["item_ids"][:MAX_ITEMS],
+                "seller_ids": order["seller_ids"][:MAX_SELLERS], "payment_ids": payment["payment_ids"][:MAX_PAYMENTS],
             },
-            "customer_context": {
-                "customer_unique_id": customer["customer_unique_id"],
-                "related_order_ids": customer["related_order_ids"],
-            },
-            "product_context": {
-                "product_ids": order["product_ids"][:MAX_PRODUCTS],
-                "category_names": order["category_names"][:MAX_CATEGORIES],
-            },
+            "customer_context": {"customer_unique_id": customer["customer_unique_id"], "related_order_ids": customer["related_order_ids"]},
+            "product_context": {"product_ids": order["product_ids"][:MAX_PRODUCTS], "category_names": order["category_names"][:MAX_CATEGORIES]},
             "delivery_analysis": delivery,
             "payment_reconciliation": {
-                "currency": "BRL", "item_total_brl": order["item_total_brl"],
-                "freight_total_brl": order["freight_total_brl"],
-                "expected_total_brl": payment["expected_total_brl"],
-                "payment_total_brl": payment["payment_total_brl"],
-                "difference_brl": payment["difference_brl"], "reconciled": payment["reconciled"],
-                "payment_types": payment["payment_types"],
+                "currency": "BRL", "item_total_brl": order["item_total_brl"], "freight_total_brl": order["freight_total_brl"],
+                "expected_total_brl": payment["expected_total_brl"], "payment_total_brl": payment["payment_total_brl"],
+                "difference_brl": payment["difference_brl"], "reconciled": payment["reconciled"], "payment_types": payment["payment_types"],
             },
             "root_cause_analysis": {
                 "ranked_causes": [{"cause_code": policy["cause_code"], "rank": 1}],

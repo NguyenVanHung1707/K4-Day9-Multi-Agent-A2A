@@ -2,68 +2,70 @@
 
 ## 1. Mục tiêu
 
-Hệ thống xử lý từng `EC_*.json` bằng dữ liệu kiểm chứng được trong Olist CSV. Không agent nào được tạo ID, timestamp, payment hoặc sự kiện không có trong nguồn. Case không khớp `EC_POLICY_V2`, evidence sai hoặc action không đúng thứ tự policy đều bị dừng thay vì sinh kết quả suy đoán.
+Hệ thống xử lý 50 case bằng facts kiểm chứng được trong Olist CSV. ID, timestamp, tiền, evidence và policy được tính bằng Python xác định. LLM chỉ audit candidate; nếu LLM mâu thuẫn hoặc trả thiếu case, cả lượt chạy bị từ chối.
 
-## 2. Sơ đồ agent và handoff
+## 2. Luồng agent và handoff
 
 ```text
-50 Input JSON
-      |
-      v
-Coordinator Agent (per case)
-      |-- Customer Agent --------> CustomerResult
-      |-- Order & Product Agent -> OrderProductResult
-      |                              |
-      |                              +--> Payment Agent --> PaymentResult
-      |                              +--> Delivery Agent -> DeliveryResult
-      |
-      +-- structured results ------> Policy Agent --> deterministic candidate
-                                               |
-                                               v
-                                        Verifier Agent
-                                       | pass       | conflict
-                                       v            v
-                                  50 JSON files    reject run
+Input JSON
+   |
+   v
+Coordinator
+   |-- Customer Agent
+   |-- Order & Product Agent
+   |-- Payment Agent
+   |-- Delivery Agent
+   v
+Policy Agent (EC_POLICY_V2)
+   v
+Verifier Agent
+   v
+50 verified candidates --one batch--> Groq Review Agent (Llama 3.1 8B)
+                                            | agree / conflict
+                                            v
+                                      output / reject
 ```
 
 ## 3. Vai trò và quyền truy cập
 
-| Agent | Trách nhiệm | Dữ liệu được đọc | Handoff |
-|---|---|---|---|
-| Coordinator | Điều phối, ghép output, ghi trace | Input và kết quả agent | Draft output |
-| Customer | Identity và lịch sử mua hàng | orders, customers | unique customer, related orders |
-| Order & Product | Order, item, seller, product, category | orders, items, products, sellers | entities và totals |
-| Payment | Tổng hợp và đối soát payment | payments và handoff Order | totals, difference, reconciled |
-| Delivery | Delivery/seller handoff variance | handoff Order | timestamps và late sellers |
-| Policy | Áp dụng thứ tự `EC_POLICY_V2` | Structured handoff | candidate issue, cause, party, refund, actions |
-| Verifier | Kiểm tra source IDs, schema và giới hạn | Draft và repository read-only | verified candidate hoặc lỗi |
+| Agent | Trách nhiệm | Dữ liệu |
+|---|---|---|
+| Customer | Customer identity và lịch sử | orders, customers |
+| Order & Product | Order, item, seller, product, category | orders, items, products, sellers |
+| Payment | Tổng hợp và đối soát | payments + Order handoff |
+| Delivery | Delivery và seller handoff variance | Order handoff |
+| Policy | Issue, cause, responsibility, refund, actions | Structured handoffs |
+| Verifier | Evidence, schema, ID, giới hạn | Draft + repository read-only |
+| Groq Review | Audit 50 candidate trong một JSON request | Facts đã xác minh, không đọc CSV trực tiếp |
 
-`DataRepository` load CSV một lần và cung cấp index read-only. Các agent chỉ nhận phần dữ liệu và handoff cần thiết cho vai trò của mình.
+## 4. Chống hallucination
 
-## 4. Contract và chống hallucination
+- Tiền dùng `Decimal`; timestamp không đổi timezone.
+- Policy chạy đúng thứ tự `EC_POLICY_V2`.
+- Evidence được đối chiếu ngược với CSV.
+- Llama chạy temperature 0, seed cố định và JSON Object Mode.
+- Batch phải trả đúng một review cho mỗi case.
+- Primary issue, cause, responsible IDs và refund phải khớp hoàn toàn candidate xác định.
+- Output chỉ được ghi sau khi deterministic checks và batch review đều pass.
 
-- Dedupe giữ thứ tự nguồn, không dùng thứ tự ngẫu nhiên của set.
-- Tiền được tính bằng `Decimal`, làm tròn hai chữ số.
-- Timestamp so sánh trực tiếp theo giá trị CSV, không đổi timezone.
-- Order không có item có `expected_total_brl`, `difference_brl`, `reconciled` bằng `null`.
-- Evidence được đối chiếu ngược với repository.
-- Action được dựng lại độc lập từ primary issue, secondary issues và refund để kiểm tra cả nội dung lẫn thứ tự.
-- File output được ghi atomically chỉ sau khi toàn bộ deterministic checks pass.
+## 5. Trace
 
-## 5. Trace và lỗi
-
-`trace.jsonl` được truncate ở đầu mỗi lượt chạy. Trace ghi handoff và kết luận của từng agent cho đủ 50 case. Lỗi dữ liệu, evidence sai, action sai hoặc schema không hợp lệ làm pipeline trả exit code 1.
+Lượt chạy LLM thành công có 400 event phân tích và 50 event `groq_review_agent/review_agreed`. Trace không chứa API key. Lỗi API, JSON sai, thiếu case hoặc policy conflict làm lệnh trả exit code 1.
 
 ## 6. Model và bảo mật
 
-- Provider: không có; pipeline không gọi dịch vụ AI bên ngoài.
-- Model: `deterministic-rule-engine`.
-- Parameter size: `0 parameters`, đáp ứng rõ ràng giới hạn ≤10B.
-- Tất cả phép join, tính tiền, thời gian, policy và verification đều tái lập được từ dữ liệu nguồn.
+- Provider: GroqCloud.
+- Model: `llama-3.1-8b-instant`.
+- Parameter size: 8B, đáp ứng giới hạn ≤10B.
+- Secret: `GROQ_API_KEY` chỉ nằm trong `.env`, file bị Git ignore.
+- Groq công bố model sẽ ngừng trên free/developer tier ngày 16/08/2026; cấu hình này cần được chạy trước thời điểm đó hoặc thay model khác ≤10B.
 
 ## 7. Cách chạy
 
 ```powershell
-python -m src.main
+pip install -r requirements.txt
+python -m src.main --use-llm
 python -m unittest discover -s tests -v
 ```
+
+`python -m src.main` là chế độ deterministic dành cho phát triển; trace audit chính thức phải được tạo với `--use-llm`.

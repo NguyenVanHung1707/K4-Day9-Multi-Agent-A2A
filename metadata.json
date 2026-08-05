@@ -1,11 +1,12 @@
 {
-  "model": "deterministic-rule-engine",
-  "provider": "none",
-  "parameter_size": "0 parameters",
-  "parameter_limit_compliance": "compliant: 0 parameters is below the 10B limit",
-  "framework": "custom deterministic multi-agent pipeline",
+  "model": "llama-3.1-8b-instant",
+  "provider": "GroqCloud",
+  "parameter_size": "8B",
+  "parameter_limit_compliance": "compliant (8B <= 10B)",
+  "framework": "custom structured multi-agent pipeline with Groq batch review agent",
   "runtime": "Python 3.12",
   "policy_version": "EC_POLICY_V2",
-  "generation_mode": "deterministic CSV analysis with fail-closed schema and evidence verification",
-  "notes": "No neural model is used. All results are reproducibly derived from Olist CSV facts and EC_POLICY_V2."
+  "generation_mode": "deterministic CSV analysis plus fail-closed Groq batch policy review",
+  "notes": "The 8B model audits all 50 structured case facts in one request but cannot create or overwrite entity IDs, timestamps, monetary calculations, evidence, refunds, or policy output."
 }
+
