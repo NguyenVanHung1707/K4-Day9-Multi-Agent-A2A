@@ -35,9 +35,9 @@ class DataEngine:
         self.payments_by_order = self.df_payments.groupby("order_id")
         self.products_by_id = self.df_products.set_index("product_id").to_dict("index")
         
-        # Customer unique ID to order_ids map (sorted chronologically by order_purchase_timestamp)
+        # Customer unique ID to order_ids map (sorted chronologically by order_purchase_timestamp ascending)
         orders_with_cust = self.df_orders.merge(self.df_customers[['customer_id', 'customer_unique_id']], on='customer_id', how='left')
-        orders_with_cust_sorted = orders_with_cust.sort_values(by='order_purchase_timestamp', ascending=False)
+        orders_with_cust_sorted = orders_with_cust.sort_values(by='order_purchase_timestamp', ascending=True)
         self.orders_by_unique_cust = orders_with_cust_sorted.groupby("customer_unique_id")["order_id"].apply(list).to_dict()
 
         # Translation map
@@ -72,7 +72,7 @@ class DataEngine:
         estimated_at_dt = self.parse_dt(order_row.get("order_estimated_delivery_date"))
         carrier_handoff_at_dt = self.parse_dt(order_row.get("order_delivered_carrier_date"))
 
-        # Customer context (sorted chronologically descending)
+        # Customer context (sorted chronologically ascending)
         cust_row = self.customers_by_id.get(customer_id, {})
         customer_unique_id = cust_row.get("customer_unique_id", "")
         all_cust_orders = self.orders_by_unique_cust.get(customer_unique_id, [])
@@ -117,10 +117,9 @@ class DataEngine:
             prod_row = self.products_by_id.get(pid, {})
             cat_name_pt = prod_row.get("product_category_name")
             if cat_name_pt and not pd.isna(cat_name_pt):
-                # Use English translated category name if available
-                cat_name_en = self.category_translation.get(cat_name_pt, cat_name_pt)
-                if cat_name_en not in category_names:
-                    category_names.append(cat_name_en)
+                # Use raw Portuguese category_name directly from products.csv
+                if cat_name_pt not in category_names:
+                    category_names.append(cat_name_pt)
 
             item_total_brl += price
             freight_total_brl += freight
@@ -174,7 +173,6 @@ class DataEngine:
         # Handoff variance & Seller analysis
         seller_handoff_analysis = []
         late_handoff_seller_ids = []
-        late_seller_freight_brl = 0.0
 
         if has_items and carrier_handoff_at_dt:
             for sid in seller_ids_ordered:
@@ -190,10 +188,6 @@ class DataEngine:
                     })
                     if is_late and sid not in late_handoff_seller_ids:
                         late_handoff_seller_ids.append(sid)
-
-            for item in items_list:
-                if item["seller_id"] in late_handoff_seller_ids:
-                    late_seller_freight_brl += float(item["freight_value"])
 
         # Flags for Policy Evaluation
         is_delivered_late = False
@@ -234,7 +228,6 @@ class DataEngine:
                 "currency": "BRL",
                 "item_total_brl": item_total_brl_out,
                 "freight_total_brl": freight_total_brl_out,
-                "late_seller_freight_brl": round(late_seller_freight_brl, 2),
                 "expected_total_brl": expected_total_brl,
                 "payment_total_brl": payment_total_brl_out,
                 "difference_brl": difference_brl,
