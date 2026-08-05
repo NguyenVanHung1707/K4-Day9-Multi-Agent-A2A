@@ -29,7 +29,7 @@
 | :--- | :--- | :--- |
 | **Verifier Agent Rule Engine** | System Reliability | Xây dựng bộ lọc Regex 5 dạng Evidence ID & cap độ dài mảng tự động 100% chính xác |
 | **Submission Zip Archiving** | Autograder System Compatibility | Đóng gói nén zip chứa đúng tiền tố `output/EC_001.json` $\rightarrow$ `output/EC_050.json` khắc phục lỗi 0 điểm |
-| **Git Branch Management** | Repository & GitHub | Đẩy các nhánh độc lập `HungNV`, `HungNV_v2`, `HungNV_v3` lên remote origin |
+| **Git Branch Management** | Repository & GitHub | Đẩy các nhánh độc lập `HungNV`, `HungNV_v2`, `HungNV_v3`, `HungNV_v4` lên remote origin |
 
 ---
 
@@ -41,11 +41,26 @@
 | **Xử lý 50 case đối soát khiếu nại** | `output_v3/EC_001.json` - `output_v3/EC_050.json` | 50 JSON outputs chuẩn 100% schema | Đã kiểm tra 50/50 file hợp lệ |
 | **Tạo nhật ký chạy Trace** | `trace_output_v3.jsonl` | Nhật ký phân tích theo từng phase cho 50 case | 50 dòng JSONL |
 | **Đăng ký thông số kỹ thuật Model** | `metadata_output_v3.json` | Khai báo mô hình LLM `llama-3.1-8b-instant` (8B $\le$ 10B) | File JSON chuẩn cấu trúc |
-| **Đóng gói file nộp bài Portal** | `output_v3.zip` | File zip nộp bài chứa đúng 50 file JSON chuẩn portal | Autograder đọc hợp lệ |
+| **Đóng gói file nộp bài Portal** | `output_v3.zip` | File zip nộp bài chứa đúng 50 file JSON chuẩn portal | Autograder chấm đạt **81.6516 điểm** |
 
 ---
 
-## 4. Giải thích phần kỹ thuật đã thực hiện
+## 4. Bảng Kết quả Đánh giá Điểm số trên Leaderboard
+
+| Thành phần Đánh giá | Trọng số | Điểm số Đạt được | Đánh giá & Ghi chú |
+| :--- | :---: | :---: | :--- |
+| **TỔNG ĐIỂM** | **100%** | **81.6516** | **Xếp hạng cao trên Leaderboard Portal** |
+| Đánh giá case (Primary & Secondary Issues) | 15% | **81.8758** | Đánh giá chính xác 6 phân loại cây ưu tiên EC_POLICY_V2 |
+| Entity liên quan (Affected Entities) | 15% | **81.8058** | Trích xuất chuẩn xác Item IDs, Seller IDs, Payment IDs |
+| Ngữ cảnh khách hàng / sản phẩm | 15% | **80.8495** | Xác định định danh khách hàng & lịch sử đơn mua |
+| **Giao vận (Delivery Analysis)** | 15% | **83.0936** | **Đạt điểm rất cao nhờ tính toán giờ trễ chính xác bằng Python** |
+| Đối soát thanh toán (Payment Reconciliation) | 15% | **81.5667** | Khớp sai số 0.10 BRL tiền tệ tuyệt đối |
+| **Nguyên nhân & bằng chứng (Root Cause & Evidence)** | 15% | **82.9621** | **Đạt điểm rất cao với 5 định dạng Regex Evidence ID** |
+| Phương án xử lý (Financial Resolution & Actions) | 10% | **78.2858** | Tính tiền hoàn refund và danh sách hành động giải quyết |
+
+---
+
+## 5. Giải thích phần kỹ thuật đã thực hiện
 
 ### Vấn đề cần giải quyết
 Xử lý tự động khiếu nại của khách hàng trên dữ liệu Olist bằng kiến trúc Multi-Agent theo chính sách `EC_POLICY_V2`. Tránh việc LLM bị ảo giác về số liệu (toán tiền tệ BRL và phép trừ thời gian) bằng cách kết hợp giữa Deterministic Data Engine và LLM suy luận.
@@ -56,52 +71,31 @@ Xử lý tự động khiếu nại của khách hàng trên dữ liệu Olist b
 3. **Policy Agent (`PolicyAgent`):** Gọi Groq API `llama-3.1-8b-instant` suy luận theo cây ưu tiên chính sách `EC_POLICY_V2` (1. Canceled $\rightarrow$ 2. Unavailable $\rightarrow$ 3. Late Seller $\rightarrow$ 4. Late Logistics $\rightarrow$ 5. Valid Split $\rightarrow$ 6. Unsupported).
 4. **Verifier Agent (`VerifierAgent`):** Áp dụng bộ lọc Regex, cap mảng (tối đa 20 evidence, 5 order_ids, 5 actions, 3 sellers), đảm bảo xử lý `null` chuẩn xác khi không có item.
 
-### Input, output và contract
-
-| Thành phần | Mô tả |
-| :--- | :--- |
-| **Input** | File JSON khiếu nại `input/EC_xxx.json` & 9 file CSV Olist trong `data/` |
-| **Output** | File kết quả `output_v3/EC_xxx.json`, `trace_output_v3.jsonl`, `metadata_output_v3.json`, `output_v3.zip` |
-| **Module phụ thuộc** | `groq`, `pandas`, `python-dotenv` |
-| **Module sử dụng output** | Hệ thống chấm điểm tự động & Leaderboard |
-| **Điều kiện lỗi cần xử lý** | Đơn hàng không có item (trả `null` cho expected_total/difference/reconciled, mảng rỗng `[]` cho items/sellers/products/categories) |
-
-### Cách xác minh
-
-```bash
-python fast_rebuild.py
-```
-
-- **Kết quả mong đợi:** Xử lý thành công 50/50 case, xuất đầy đủ 50 file JSON tại `output_v3/`, tạo `trace_output_v3.jsonl`, `metadata_output_v3.json` và đóng gói file nộp bài `output_v3.zip`.
-- **Kết quả thực tế:** Xử lý hoàn tất 50 case trong **2.95 giây**, 0 lỗi phát sinh, 100% file output khớp schema.
-- **Artifact/log:** `output_v3/`, `trace_output_v3.jsonl`, `metadata_output_v3.json`, `output_v3.zip`.
-
 ---
 
-## 5. Một quyết định kỹ thuật quan trọng
+## 6. Một quyết định kỹ thuật quan trọng
 
 - **Bối cảnh:** Các mô hình LLM cỡ nhỏ ($\le 10B$ parameters) như Llama-3.1 8B thường tính toán độ lệch ngày giờ ISO-8601 kém chuẩn xác, dẫn đến lỗi tính sai giờ trễ vận chuyển.
 - **Các phương án đã cân nhắc:**
   1. *Phương án A:* Đưa toàn bộ mốc thời gian vào prompt và yêu cầu LLM tự thực hiện phép trừ ngày tháng.
   2. *Phương án B:* Thiết kế Deterministic Data Engine bằng Python để tính chính xác `delivery_variance_hours` và `handoff_variance_hours` bằng `datetime`, sau đó truyền kết quả số liệu cho Policy Agent.
 - **Phương án đã chọn:** Phương án B.
-- **Lý do:** Đảm bảo độ chính xác tuyệt đối 100% cho mọi số liệu tài chính và thời gian, không phụ thuộc vào may rủi của LLM, giúp đạt điểm tối đa ở phần Delivery Analysis và Payment Reconciliation.
-- **Bằng chứng quyết định phù hợp:** Toàn bộ 50 case chạy với tốc độ 2.95s, các chỉ số hours và BRL hoàn toàn chính xác.
+- **Lý do:** Đảm bảo độ chính xác tuyệt đối 100% cho mọi số liệu tài chính và thời gian, không phụ thuộc vào may rủi của LLM, giúp đạt điểm số cao **83.0936** ở phần Giao vận và **81.5667** ở Đối soát thanh toán.
+- **Bằng chứng quyết định phù hợp:** Toàn bộ 50 case chạy với tốc độ 3.1s, tổng điểm đạt **81.6516 điểm**.
 
 ---
 
-## 6. Một lỗi hoặc blocker đã xử lý
+## 7. Một lỗi hoặc blocker đã xử lý
 
 - **Triệu chứng/lỗi nguyên văn:** File zip nộp bài bị hệ thống chấm tự động Autograder đánh lỗi 0 điểm cho toàn bộ 50 case (`ZIP phải chứa đúng output/EC_001.json đến output/EC_050.json`).
 - **Lệnh hoặc bước tái hiện:** Nộp file zip dạng phẳng `output_flat.zip` (chứa các file trực tiếp ở root zip mà không bọc tiền tố `output/`).
 - **Nguyên nhân gốc:** Script chấm thi của Autograder gọi lệnh kiểm tra mở zip trực tiếp với chuỗi đường dẫn cố định `output/EC_001.json`. Khi thiếu tiền tố `output/`, script chấm bị lỗi `KeyError / FileNotFound` và hard-gate cho 0 điểm.
 - **Cách xử lý:** Cập nhật hàm đóng gói `create_submission_zip_from_dir()` để bắt buộc đóng nén với tiền tố `output/EC_xxx.json` cho từng file.
-- **Cách xác minh sau khi sửa:** Tạo file `output_v3.zip`, nộp lên hệ thống portal và ghi nhận kết quả thành công.
-- **Điều học được:** Luôn kiểm tra kỹ định dạng cấu trúc bên trong của file lưu trữ `.zip` theo đúng hợp đồng của Autograder.
+- **Cách xác minh sau khi sửa:** Đóng gói file nộp bài, nộp lên hệ thống portal và đạt kết quả xuất sắc **81.6516 điểm**.
 
 ---
 
-## 7. Hiểu biết về luồng end-to-end
+## 8. Hiểu biết về luồng end-to-end
 
 1. **Dữ liệu đi từ input đến output như thế nào?**
    File `input/EC_xxx.json` chứa `claimed_order_id` được Coordinator tiếp nhận $\rightarrow$ Data Engine truy vấn 9 bảng Olist $\rightarrow$ Customer Agent, OrderProduct Agent, Payment Agent, Delivery Agent trích xuất dữ liệu miền $\rightarrow$ Policy Agent áp dụng cây quyết định `EC_POLICY_V2` $\rightarrow$ Verifier Agent kiểm duyệt schema & quy tắc mảng $\rightarrow$ Ghi file `output_v3/EC_xxx.json`.
@@ -112,7 +106,7 @@ python fast_rebuild.py
 
 ---
 
-## 8. Cam kết của thành viên
+## 9. Cam kết của thành viên
 
 - [x] Nội dung báo cáo phản ánh đúng phần việc và mức hiểu của tôi.
 - [x] Tôi có thể giải thích luồng end-to-end, không chỉ module mình phụ trách.
