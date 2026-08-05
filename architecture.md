@@ -35,7 +35,7 @@ graph TD
 
     VerifierAgent -->|Validation Passed| Coordinator
     VerifierAgent -.->|Validation Failed / Retry| PolicyAgent
-    Coordinator --> Output[Output Result: output/EC_xxx.json]
+    Coordinator --> Output[Output Result: output_v3/EC_xxx.json]
 ```
 
 ---
@@ -44,7 +44,7 @@ graph TD
 
 | Agent | Vai Trò Chính | Đầu Vào (Input) | Đầu Ra (Output) |
 | :--- | :--- | :--- | :--- |
-| **Coordinator Agent** | Điều phối toàn bộ quy trình, giao việc cho các Domain Agent, thu thập dữ liệu và xuất file output JSON cuối cùng. | File khiếu nại `input/EC_xxx.json` | File kết quả `output/EC_xxx.json` & log trace |
+| **Coordinator Agent** | Điều phối toàn bộ quy trình, giao việc cho các Domain Agent, thu thập dữ liệu và xuất file output JSON cuối cùng. | File khiếu nại `input/EC_xxx.json` | File kết quả `output_v3/EC_xxx.json` & log trace |
 | **Customer Agent** | Truy vết danh tính khách hàng và lịch sử mua hàng liên quan. | `claimed_order_id` | `customer_unique_id`, `related_order_ids`, cờ `repeat_customer` |
 | **Order & Product Agent** | Phân tích chi tiết danh mục hàng hóa, số lượng item, thông tin sản phẩm và người bán (sellers). | `claimed_order_id` | `item_ids`, `seller_ids`, `product_ids`, `category_names`, cờ `multi_item_order`, `multi_seller_order`, `multiple_categories` |
 | **Payment Agent** | Tổng hợp các dòng thanh toán, tính toán kỳ vọng giá trị đơn và thực hiện đối soát tài chính. | `claimed_order_id`, dữ liệu items | `item_total_brl`, `freight_total_brl`, `expected_total_brl`, `payment_total_brl`, `difference_brl`, `reconciled`, `payment_types`, cờ `split_payment` |
@@ -56,7 +56,7 @@ graph TD
 
 ## 3. Quyền Truy Cập Dữ Liệu (Data Access Permissions Scope)
 
-Để tuân thủ nguyên tắc đóng đóng/mở mở (Principle of Least Privilege), từng Agent chỉ được cấp quyền đọc các bảng dữ liệu liên quan:
+Để tuân thủ nguyên tắc phân quyền tối thiểu (Principle of Least Privilege), từng Agent chỉ được cấp quyền đọc các bảng dữ liệu liên quan:
 
 - **Customer Agent:** Chi tiếp cận `customers.csv` và `orders.csv`.
 - **Order & Product Agent:** Chi tiếp cận `orders.csv`, `order_items.csv`, `products.csv`, `sellers.csv`, `product_category_name_translation.csv`.
@@ -97,7 +97,7 @@ sequenceDiagram
     
     alt Kiểm tra đạt chuẩn (Schema Pass)
         V-->>C: Xác nhận Output Hợp lệ (Approved)
-        C->>C: Ghi kết quả vào file output/EC_xxx.json
+        C->>C: Ghi kết quả vào file output_v3/EC_xxx.json
     else Kiểm tra lỗi (Schema Fail)
         V-->>POL: Báo lỗi định dạng/giới hạn (Rejection Feedback)
         POL->>POL: Sửa đổi dữ liệu chưa chuẩn
