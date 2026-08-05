@@ -1,10 +1,32 @@
 import os
 import json
 import time
+import glob
+import zipfile
 
 from src.data_engine import DataEngine
 from src.llm_client import LLMClient
 from src.agents import CoordinatorAgent
+
+
+def create_versioned_zip(output_dir: str, base_dir: str) -> str:
+    """
+    Creates a versioned zip archive (output.zip, output_v2.zip, output_v3.zip...) containing all 50 output JSON files.
+    """
+    version = 1
+    zip_filename = "output.zip"
+    while os.path.exists(os.path.join(base_dir, zip_filename)):
+        version += 1
+        zip_filename = f"output_v{version}.zip"
+
+    zip_filepath = os.path.join(base_dir, zip_filename)
+    json_files = sorted(glob.glob(os.path.join(output_dir, "*.json")))
+
+    with zipfile.ZipFile(zip_filepath, "w", zipfile.ZIP_DEFLATED) as zipf:
+        for fpath in json_files:
+            zipf.write(fpath, os.path.basename(fpath))
+
+    return zip_filename
 
 
 def main():
@@ -17,7 +39,7 @@ def main():
 
     os.makedirs(output_dir, exist_ok=True)
 
-    print("Initializing DataEngine and LLMClient...")
+    print("Initializing DataEngine and LLMClient (Groq API)...")
     data_engine = DataEngine(data_dir=data_dir)
     llm_client = LLMClient()
     coordinator = CoordinatorAgent(data_engine=data_engine, llm_client=llm_client)
@@ -25,7 +47,7 @@ def main():
     all_traces = []
     start_time = time.time()
 
-    print("Starting processing of 50 input cases...")
+    print("Starting processing of 50 input cases with Groq LLM API...")
     for i in range(1, 51):
         case_file = f"EC_{i:03d}.json"
         case_path = os.path.join(input_dir, case_file)
@@ -38,7 +60,7 @@ def main():
             case_input = json.load(f)
 
         case_id = case_input["case_id"]
-        print(f"[{i:02d}/50] Processing {case_id}...")
+        print(f"[{i:02d}/50] Processing {case_id} via Groq API...")
 
         output_data, trace_steps = coordinator.process_case(case_input)
 
@@ -69,8 +91,8 @@ def main():
         "models": [
             {
                 "agent_role": "Policy Agent (Reasoning & Decision)",
-                "model_name": "gemma2-9b-it",
-                "parameter_size": "9B",
+                "model_name": "llama-3.1-8b-instant",
+                "parameter_size": "8B",
                 "provider": "Groq"
             },
             {
@@ -90,8 +112,12 @@ def main():
     with open(metadata_path, "w", encoding="utf-8") as f:
         json.dump(metadata_content, f, indent=2, ensure_ascii=False)
 
+    # Automatically create versioned output zip (e.g. output_v2.zip, output_v3.zip...)
+    zip_created = create_versioned_zip(output_dir, base_dir)
+
     print(f"Pipeline completed successfully in {total_time}s!")
     print(f"Outputs written to {output_dir}/")
+    print(f"Versioned archive created: {zip_created}")
     print(f"Trace log written to {trace_path}")
     print(f"Metadata written to {metadata_path}")
 
