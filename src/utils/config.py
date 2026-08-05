@@ -10,7 +10,7 @@ load_dotenv()
 
 # SiliconFlow API Configuration
 SILICONFLOW_API_KEY = os.getenv("SILICONFLOW_API_KEY")
-SILICONFLOW_BASE_URL = "https://api.siliconflow.cn/v1"
+SILICONFLOW_BASE_URL = "https://api.siliconflow.com/v1"
 MODEL_NAME = "Qwen/Qwen3.5-9B"
 
 # Database Configuration

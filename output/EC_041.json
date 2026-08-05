@@ -19,8 +19,8 @@
       "614bc59c7d5e038587336616e3198e33:2"
     ],
     "seller_ids": [
-      "30a2f535bb48308f991d0b9ad4a8c4bb",
-      "7e3f87d16fb353f408d467e74fbd8014"
+      "7e3f87d16fb353f408d467e74fbd8014",
+      "30a2f535bb48308f991d0b9ad4a8c4bb"
     ],
     "payment_ids": [
       "614bc59c7d5e038587336616e3198e33:1",
@@ -33,8 +33,8 @@
   },
   "product_context": {
     "product_ids": [
-      "ac2075f88185bb528b66bfb7a5646369",
-      "f9f260f8a0d16df18bcc7248495d779c"
+      "f9f260f8a0d16df18bcc7248495d779c",
+      "ac2075f88185bb528b66bfb7a5646369"
     ],
     "category_names": [
       "furniture_decor"

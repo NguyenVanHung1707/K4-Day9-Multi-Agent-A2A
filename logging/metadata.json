@@ -6,23 +6,23 @@
   "total_cases": 50,
   "successful_cases": 50,
   "failed_cases": 0,
-  "total_duration_seconds": 0.66,
+  "total_duration_seconds": 0.53,
   "avg_case_duration_seconds": 0.01,
-  "timestamp": "2026-08-05T15:41:28.710461",
+  "timestamp": "2026-08-05T16:17:25.208232",
   "results": [
     {
       "case_id": "EC_001",
       "status": "success",
       "primary_issue": "unsupported_late_claim",
       "refund_brl": 0.0,
-      "duration_seconds": 0.04
+      "duration_seconds": 0.01
     },
     {
       "case_id": "EC_002",
       "status": "success",
       "primary_issue": "late_delivery_seller",
       "refund_brl": 18.27,
-      "duration_seconds": 0.02
+      "duration_seconds": 0.01
     },
     {
       "case_id": "EC_003",
@@ -36,7 +36,7 @@
       "status": "success",
       "primary_issue": "canceled_order_paid",
       "refund_brl": 290.16,
-      "duration_seconds": 0.02
+      "duration_seconds": 0.01
     },
     {
       "case_id": "EC_005",
@@ -50,7 +50,7 @@
       "status": "success",
       "primary_issue": "late_delivery_seller",
       "refund_brl": 60.4,
-      "duration_seconds": 0.02
+      "duration_seconds": 0.01
     },
     {
       "case_id": "EC_007",
@@ -120,14 +120,14 @@
       "status": "success",
       "primary_issue": "late_delivery_logistics",
       "refund_brl": 18.15,
-      "duration_seconds": 0.01
+      "duration_seconds": 0.0
     },
     {
       "case_id": "EC_017",
       "status": "success",
       "primary_issue": "late_delivery_logistics",
       "refund_brl": 48.54,
-      "duration_seconds": 0.01
+      "duration_seconds": 0.02
     },
     {
       "case_id": "EC_018",
@@ -204,7 +204,7 @@
       "status": "success",
       "primary_issue": "canceled_order_paid",
       "refund_brl": 242.62,
-      "duration_seconds": 0.01
+      "duration_seconds": 0.0
     },
     {
       "case_id": "EC_029",
@@ -232,14 +232,14 @@
       "status": "success",
       "primary_issue": "late_delivery_seller",
       "refund_brl": 31.64,
-      "duration_seconds": 0.01
+      "duration_seconds": 0.02
     },
     {
       "case_id": "EC_033",
       "status": "success",
       "primary_issue": "unavailable_order_paid",
       "refund_brl": 35.96,
-      "duration_seconds": 0.01
+      "duration_seconds": 0.02
     },
     {
       "case_id": "EC_034",

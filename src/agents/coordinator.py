@@ -174,9 +174,9 @@ class Coordinator:
         # Process
         output = self.process_case(case_input)
         
-        # Save output
+        # Save output with LF line endings (not CRLF)
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-        with open(output_path, 'w', encoding='utf-8') as f:
+        with open(output_path, 'w', encoding='utf-8', newline='\n') as f:
             json.dump(output.model_dump(), f, indent=2, ensure_ascii=False)
         
         return output
