@@ -79,10 +79,10 @@ class DataEngine:
         related_order_ids = [oid for oid in all_cust_orders if oid != claimed_order_id][:5]
         repeat_customer = len(related_order_ids) > 0
 
-        # Items & Product context
+        # Items & Product context (sorted by order_item_id)
         items_list = []
         if claimed_order_id in self.items_by_order.groups:
-            items_df = self.items_by_order.get_group(claimed_order_id)
+            items_df = self.items_by_order.get_group(claimed_order_id).sort_values(by="order_item_id")
             items_list = items_df.to_dict("records")
 
         has_items = len(items_list) > 0
@@ -129,10 +129,10 @@ class DataEngine:
                 if earliest_shipping_limit_dt is None or shipping_limit_dt < earliest_shipping_limit_dt:
                     earliest_shipping_limit_dt = shipping_limit_dt
 
-        # Payments context
+        # Payments context (sorted by payment_sequential)
         payments_list = []
         if claimed_order_id in self.payments_by_order.groups:
-            payments_df = self.payments_by_order.get_group(claimed_order_id)
+            payments_df = self.payments_by_order.get_group(claimed_order_id).sort_values(by="payment_sequential")
             payments_list = payments_df.to_dict("records")
 
         payment_ids = []
