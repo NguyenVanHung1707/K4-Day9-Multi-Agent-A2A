@@ -8,7 +8,7 @@
       "split_payment"
     ],
     "case_status": "no_action",
-    "confidence": 0.92
+    "confidence": 0.9
   },
   "affected_entities": {
     "order_ids": [
@@ -35,11 +35,11 @@
   },
   "product_context": {
     "product_ids": [
-      "11a10f5773a7da9fb352dfe9e119803b",
-      "9c6d5d4aaea6884ee19112567691a1da"
+      "9c6d5d4aaea6884ee19112567691a1da",
+      "11a10f5773a7da9fb352dfe9e119803b"
     ],
     "category_names": [
-      "bed_bath_table"
+      "cama_mesa_banho"
     ]
   },
   "delivery_analysis": {
@@ -72,8 +72,8 @@
     "difference_brl": 0.0,
     "reconciled": true,
     "payment_types": [
-      "voucher",
-      "credit_card"
+      "credit_card",
+      "voucher"
     ]
   },
   "root_cause_analysis": {

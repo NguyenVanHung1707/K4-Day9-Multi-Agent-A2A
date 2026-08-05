@@ -33,3 +33,4 @@ submission.zip
 # Logs
 *.log
 logging/*.jsonl
+output.zip

@@ -53,13 +53,20 @@ class OrderAgent:
             # Get unique sellers
             seller_ids = list(set(item['seller_id'] for item in items))[:MAX_SELLER_IDS]
             
-            # Get unique products
-            product_ids = list(set(item['product_id'] for item in items))[:MAX_PRODUCT_IDS]
+            # Get unique products (maintain order from items)
+            seen_products = set()
+            product_ids = []
+            for item in items:
+                pid = item['product_id']
+                if pid not in seen_products:
+                    seen_products.add(pid)
+                    product_ids.append(pid)
+            product_ids = product_ids[:MAX_PRODUCT_IDS]
             
-            # Get unique categories (English names)
+            # Get unique categories (Portuguese names from DB, not translated)
             category_names = []
             for item in items:
-                cat_name = item.get('product_category_name_english')
+                cat_name = item.get('product_category_name')  # Use Portuguese name
                 if cat_name and cat_name not in category_names:
                     category_names.append(cat_name)
             category_names = category_names[:MAX_CATEGORY_NAMES]

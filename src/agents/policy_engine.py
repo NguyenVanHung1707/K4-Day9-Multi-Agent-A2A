@@ -159,7 +159,7 @@ class PolicyEngine:
                 "primary_issue": policy_result['primary_issue'],
                 "secondary_issues": secondary_issues,
                 "case_status": case_status,
-                "confidence": 0.92  # High confidence for deterministic rules
+                "confidence": 0.9  # Confidence level for deterministic rules
             },
             "root_cause_analysis": {
                 "ranked_causes": [

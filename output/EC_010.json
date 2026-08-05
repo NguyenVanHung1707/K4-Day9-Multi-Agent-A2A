@@ -8,7 +8,7 @@
       "split_payment"
     ],
     "case_status": "no_action",
-    "confidence": 0.92
+    "confidence": 0.9
   },
   "affected_entities": {
     "order_ids": [
@@ -33,11 +33,11 @@
   },
   "product_context": {
     "product_ids": [
-      "e0d64dcfaa3b6db5c54ca298ae101d05",
-      "81fa3a54b696e8510a2f5cd69b29337d"
+      "81fa3a54b696e8510a2f5cd69b29337d",
+      "e0d64dcfaa3b6db5c54ca298ae101d05"
     ],
     "category_names": [
-      "watches_gifts"
+      "relogios_presentes"
     ]
   },
   "delivery_analysis": {

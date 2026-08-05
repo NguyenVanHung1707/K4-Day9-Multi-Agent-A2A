@@ -7,7 +7,7 @@
       "multi_seller_order"
     ],
     "case_status": "no_action",
-    "confidence": 0.92
+    "confidence": 0.9
   },
   "affected_entities": {
     "order_ids": [
@@ -31,11 +31,11 @@
   },
   "product_context": {
     "product_ids": [
-      "817e1c2d22418c36386406ccacfa53e8",
-      "9474f3c0da0c4fd0bdf88cf6ac1b5d04"
+      "9474f3c0da0c4fd0bdf88cf6ac1b5d04",
+      "817e1c2d22418c36386406ccacfa53e8"
     ],
     "category_names": [
-      "furniture_decor"
+      "moveis_decoracao"
     ]
   },
   "delivery_analysis": {

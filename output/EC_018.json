@@ -7,7 +7,7 @@
       "multi_seller_order"
     ],
     "case_status": "no_action",
-    "confidence": 0.92
+    "confidence": 0.9
   },
   "affected_entities": {
     "order_ids": [
@@ -31,11 +31,11 @@
   },
   "product_context": {
     "product_ids": [
-      "9b1954fdd0f9b4ef4ee2d267ac9de4bd",
-      "6cdd53843498f92890544667809f1595"
+      "6cdd53843498f92890544667809f1595",
+      "9b1954fdd0f9b4ef4ee2d267ac9de4bd"
     ],
     "category_names": [
-      "health_beauty"
+      "beleza_saude"
     ]
   },
   "delivery_analysis": {

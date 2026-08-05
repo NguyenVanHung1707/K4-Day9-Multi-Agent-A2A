@@ -8,7 +8,7 @@
       "split_payment"
     ],
     "case_status": "no_action",
-    "confidence": 0.92
+    "confidence": 0.9
   },
   "affected_entities": {
     "order_ids": [
@@ -33,11 +33,11 @@
   },
   "product_context": {
     "product_ids": [
-      "188d0b148e6d1c86faffe0d73c3f2dad",
-      "a0b7d5a992ccda646f2d34e418fff5a0"
+      "a0b7d5a992ccda646f2d34e418fff5a0",
+      "188d0b148e6d1c86faffe0d73c3f2dad"
     ],
     "category_names": [
-      "furniture_decor"
+      "moveis_decoracao"
     ]
   },
   "delivery_analysis": {
@@ -70,8 +70,8 @@
     "difference_brl": 0.0,
     "reconciled": true,
     "payment_types": [
-      "voucher",
-      "credit_card"
+      "credit_card",
+      "voucher"
     ]
   },
   "root_cause_analysis": {
