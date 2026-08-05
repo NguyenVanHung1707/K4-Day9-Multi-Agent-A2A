@@ -9,26 +9,33 @@ from src.llm_client import LLMClient
 from src.agents import CoordinatorAgent
 
 
-def create_versioned_zip(output_dir: str, base_dir: str) -> str:
+def create_submission_zips(output_dir: str, base_dir: str):
     """
-    Creates a versioned zip archive (output.zip, output_v2.zip, output_v3.zip...) containing output/EC_001.json to output/EC_050.json.
+    Creates both submission zip formats to prevent autograder zero-point failures:
+    1. output_flat.zip: files directly at root (EC_001.json ... EC_050.json) - Standard Autograder Format
+    2. output_with_folder.zip: files inside output/ directory (output/EC_001.json ... output/EC_050.json)
     """
-    version = 1
-    zip_filename = "output.zip"
-    while os.path.exists(os.path.join(base_dir, zip_filename)):
-        version += 1
-        zip_filename = f"output_v{version}.zip"
-
-    zip_filepath = os.path.join(base_dir, zip_filename)
     json_files = sorted(glob.glob(os.path.join(output_dir, "*.json")))
 
-    with zipfile.ZipFile(zip_filepath, "w", zipfile.ZIP_DEFLATED) as zipf:
+    # 1. Flat zip (EC_001.json directly at root)
+    flat_zip_path = os.path.join(base_dir, "output_flat.zip")
+    with zipfile.ZipFile(flat_zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
         for fpath in json_files:
-            # Preserve output/ directory prefix inside zip archive
-            arcname = f"output/{os.path.basename(fpath)}"
-            zipf.write(fpath, arcname)
+            zipf.write(fpath, os.path.basename(fpath))
 
-    return zip_filename
+    # 2. Folder zip (output/EC_001.json)
+    folder_zip_path = os.path.join(base_dir, "output_with_folder.zip")
+    with zipfile.ZipFile(folder_zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
+        for fpath in json_files:
+            zipf.write(fpath, f"output/{os.path.basename(fpath)}")
+
+    # Also update output.zip to flat format (standard)
+    default_zip_path = os.path.join(base_dir, "output.zip")
+    with zipfile.ZipFile(default_zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
+        for fpath in json_files:
+            zipf.write(fpath, os.path.basename(fpath))
+
+    print(f"Created submission zips successfully: output_flat.zip, output_with_folder.zip, output.zip")
 
 
 def main():
@@ -114,12 +121,11 @@ def main():
     with open(metadata_path, "w", encoding="utf-8") as f:
         json.dump(metadata_content, f, indent=2, ensure_ascii=False)
 
-    # Automatically create versioned output zip
-    zip_created = create_versioned_zip(output_dir, base_dir)
+    # Generate both flat and folder submission zip files
+    create_submission_zips(output_dir, base_dir)
 
     print(f"Pipeline completed successfully in {total_time}s!")
     print(f"Outputs written to {output_dir}/")
-    print(f"Versioned archive created: {zip_created}")
     print(f"Trace log written to {trace_path}")
     print(f"Metadata written to {metadata_path}")
 
