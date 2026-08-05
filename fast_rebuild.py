@@ -79,7 +79,7 @@ def create_submission_zip_from_dir(src_dir: str, zip_path: str):
     print(f"Created submission zip: {zip_path}")
 
 
-def rebuild_version(version_name: str = "output_v3"):
+def rebuild_version(version_name: str = "output_v4"):
     base_dir = os.path.dirname(os.path.abspath(__file__))
     data_dir = os.path.join(base_dir, "data")
     input_dir = os.path.join(base_dir, "input")
@@ -168,4 +168,4 @@ def rebuild_version(version_name: str = "output_v3"):
 
 
 if __name__ == "__main__":
-    rebuild_version("output_v3")
+    rebuild_version("output_v4")
