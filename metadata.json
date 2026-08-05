@@ -1,8 +1,12 @@
 {
-  "model": "none-deterministic-policy-engine",
-  "parameter_size": 0,
-  "framework": "custom structured multi-agent pipeline (Python standard library)",
+  "model": "gemini-3.5-flash-lite",
+  "provider": "Google Gemini API",
+  "parameter_size": "undisclosed by Google",
+  "parameter_limit_compliance": "not independently verifiable",
+  "framework": "custom structured multi-agent pipeline with google-genai batch review agent",
   "runtime": "Python 3.12",
   "policy_version": "EC_POLICY_V2",
-  "notes": "No LLM is used to invent or calculate case facts. Agents perform read-only deterministic analysis over Olist CSV rows, followed by policy and evidence verification."
+  "generation_mode": "deterministic CSV analysis plus fail-closed Gemini batch policy review",
+  "notes": "Gemini reviews all 50 structured case facts in one request but cannot create or overwrite entity IDs, timestamps, monetary calculations, evidence, refunds, or policy output."
 }
+

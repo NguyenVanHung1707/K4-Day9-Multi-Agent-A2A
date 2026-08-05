@@ -1,2 +1,2 @@
-# The production pipeline intentionally uses only the Python 3.11+ standard library.
+google-genai>=1.0.0
 

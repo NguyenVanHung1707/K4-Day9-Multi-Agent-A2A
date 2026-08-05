@@ -7,8 +7,10 @@ OUTPUT_DIR = ROOT_DIR / "output"
 TRACE_PATH = ROOT_DIR / "trace.jsonl"
 
 POLICY_VERSION = "EC_POLICY_V2"
-MODEL_NAME = "none-deterministic-policy-engine"
-MODEL_PARAMETER_SIZE = 0
+MODEL_PROVIDER = "Google Gemini API"
+MODEL_NAME = "gemini-3.5-flash-lite"
+# Google does not publish a parameter count for this Gemini model.
+MODEL_PARAMETER_SIZE = "undisclosed"
 
 MAX_ITEMS = 5
 MAX_SELLERS = 3
