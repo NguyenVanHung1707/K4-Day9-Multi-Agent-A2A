@@ -17,26 +17,29 @@ Do yêu cầu cuộc thi quy định các LLM model phải **$\le$ 10B parameter
 graph TD
     Input[Input Case EC_xxx.json] --> Coordinator[1. Coordinator Agent]
     
-    subgraph Data & Domain Analysis Agents
-        Coordinator -->|Handoff Case ID & Scope| DataEngine[Deterministic Data Engine]
-        DataEngine -->|Raw Case Context| CustomerAgent[2. Customer & Order Agent]
-        DataEngine -->|Raw Item & Product Data| ProductAgent[3. Product & Item Agent]
-        DataEngine -->|Raw Delivery Timestamps| DeliveryAgent[4. Delivery Analysis Agent]
-        DataEngine -->|Raw Payments & Items| PaymentAgent[5. Payment Reconciliation Agent]
+    Coordinator -->|1. Query Case Data| DataEngine[(Deterministic Data Engine)]
+    DataEngine -->|2. Structured Case Data| Coordinator
+    
+    subgraph Specialists Analysis (State Handoff)
+        Coordinator -->|3a. Customer Profile| CustomerAgent[2. Customer Agent]
+        Coordinator -->|3b. Items & Sellers| ProductAgent[3. Product Agent]
+        Coordinator -->|3c. Timestamps| DeliveryAgent[4. Delivery Agent]
+        Coordinator -->|3d. Financials| PaymentAgent[5. Payment Agent]
+        
+        CustomerAgent -->|4a. Customer Profile| Blackboard[(Shared Blackboard State)]
+        ProductAgent -->|4b. Items & Sellers| Blackboard
+        DeliveryAgent -->|4c. Delivery Variance| Blackboard
+        PaymentAgent -->|4d. Reconciliation| Blackboard
     end
 
-    CustomerAgent -->|Customer Context| PolicyAgent[6. Policy & Resolution Agent]
-    ProductAgent -->|Product Context| PolicyAgent
-    DeliveryAgent -->|Delivery Analysis| PolicyAgent
-    PaymentAgent -->|Payment Reconciliation| PolicyAgent
-
-    subgraph Decision & Quality Control
-        PolicyAgent -->|Draft Assessment & Resolution| VerifierAgent[7. Verifier & Audit Agent]
-        VerifierAgent -->|Pass / Approved| FinalOutput[Final Output JSON]
-        VerifierAgent -->|Fail / Auto-Fix Rules| PolicyAgent
-    end
-
-    FinalOutput --> Logger[Trace Logger -> trace.jsonl]
+    Coordinator -->|5. Handoff Blackboard Context| PolicyAgent[6. Policy Agent]
+    PolicyAgent -->|6. Resolution Proposal & Reasoning| Coordinator
+    
+    Coordinator -->|7. Audit Draft JSON| VerifierAgent[7. Verifier Agent]
+    VerifierAgent -->|8. Validate limits & schema| FinalOutput{Final Decision}
+    
+    FinalOutput -->|Approved| Save[Output JSON & trace.jsonl]
+    FinalOutput -->|Audit Failed| Fix[Auto-Fix / Log Error]
 ```
 
 ---

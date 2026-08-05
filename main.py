@@ -42,6 +42,8 @@ def main():
             t["case_id"] = case_id
             all_traces.append(t)
 
+        import time
+        time.sleep(2.0)
         print(f"Processed {case_id} -> output/{filename}")
 
     # Write trace.jsonl to logging/ directory and root

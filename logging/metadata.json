@@ -1,6 +1,6 @@
 {
-  "model": "gpt-4o-mini",
+  "model": "llama-3.1-8b-instant",
   "parameter_size": "8B",
   "framework": "Custom Multi-Agent A2A Framework",
-  "runtime": "OpenAI API / Python 3.12"
+  "runtime": "Groq API / Python 3.12"
 }

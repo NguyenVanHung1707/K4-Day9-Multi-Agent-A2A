@@ -14,8 +14,20 @@ class LLMClient:
     def __init__(self, model_name: str = MODEL_NAME):
         self.model_name = model_name
         self._load_dotenv()
-        self.api_key = os.getenv("OPENAI_API_KEY") or os.getenv("LLM_API_KEY") or ""
-        self.base_url = os.getenv("LLM_BASE_URL") or "https://api.openai.com/v1"
+        self.api_key = (
+            os.getenv("GROQ_API_KEY") or 
+            os.getenv("LLM_API_KEY") or 
+            os.getenv("OPENAI_API_KEY") or 
+            ""
+        )
+        self.base_url = (
+            os.getenv("LLM_BASE_URL") or 
+            (
+                "https://api.groq.com/openai/v1"
+                if "llama" in model_name.lower()
+                else "https://api.openai.com/v1"
+            )
+        )
 
     def _load_dotenv(self):
         env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
@@ -37,7 +49,8 @@ class LLMClient:
         url = f"{self.base_url.rstrip('/')}/chat/completions"
         headers = {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.api_key}"
+            "Authorization": f"Bearer {self.api_key}",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         }
         
         payload = {
