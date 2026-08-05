@@ -1,186 +1,133 @@
-Dựa trên tài liệu nghiệp vụ và yêu cầu kiến trúc bạn đã cung cấp, tôi đề xuất một **Workflow chi tiết cho Hệ thống Multi-Agent**. Workflow này đảm bảo tính đóng gói (encapsulation), chuyển giao trạng thái (state hand-off) rõ ràng và tuân thủ nghiêm ngặt nguyên tắc chia để trị (divide and conquer), tuyệt đối không gộp chung vào một prompt.
+# Workflow Chi Tiết Hệ Thống Multi-Agent (A2A) — Dispute Resolution Pipeline
 
-Dưới đây là chi tiết luồng xử lý và giao thức giao tiếp giữa các Agents.
+Tài liệu này mô tả chi tiết luồng xử lý thực thi (Execution Workflow), giao thức giao tiếp giữa các Agents, và vị trí của các **Model LLM ($\le$ 10B)** trong kiến trúc Multi-Agent giải quyết khiếu nại thương mại điện tử Olist theo chính sách `EC_POLICY_V2`.
 
 ---
 
-## 1. Sơ đồ Luồng Thực thi (Execution Workflow)
+## 1. Sơ đồ Kiến trúc & Luồng Thực thi (Detailed Execution Workflow)
 
 ```mermaid
-sequenceDiagram
-    participant C as Coordinator Agent
-    participant OP as Order & Product Agent
-    participant CA as Customer Agent
-    participant PA as Payment Agent
-    participant DA as Delivery Agent
-    participant POL as Policy Agent
-    participant V as Verifier Agent
+flowchart TD
+    %% Styling & Theme Setup
+    classDef inputStyle fill:#e1f5fe,stroke:#0288d1,stroke-width:2px,color:#01579b;
+    classDef engineStyle fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#e65100;
+    classDef agentStyle fill:#e8f5e9,stroke:#388e3c,stroke-width:2px,color:#1b5e20;
+    classDef policyStyle fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#4a148c;
+    classDef verifierStyle fill:#ffebee,stroke:#d32f2f,stroke-width:2px,color:#b71c1c;
+    classDef outputStyle fill:#ede7f6,stroke:#512da8,stroke-width:2px,color:#311b92;
+    classDef modelBadge fill:#263238,stroke:#37474f,stroke-width:1px,color:#ffffff;
 
-    Note over C: Nhận EC_xxx.json
-    C->>OP: 1. Extract Items & Sellers (Order ID)
-    OP-->>C: Trả về Item List, Prices, Freight, Sellers limits
-    
-    par Parallel Processing
-        C->>CA: 2a. Check Customer Identity
-        CA-->>C: Trả về History & Repeat Status
-    and
-        C->>PA: 2b. Reconcile Payments (gửi kèm Item Prices)
-        PA-->>C: Trả về Payment Total, Diff, Reconciled flag
-    and
-        C->>DA: 2c. Calc Delivery Variance (gửi kèm Seller limits)
-        DA-->>C: Trả về Time Variances, Lỗi thuộc Seller/Carrier
+    %% Subgraph 1: Input & Data Preparation
+    subgraph Phase1["PHASE 1: Khởi Tạo & Trích Xuất Dữ Liệu Chính Xác (Deterministic Data Engine)"]
+        A["Input Case File: input/EC_xxx.json"] ::: inputStyle
+        B["DataEngine: Nạp 9 CSV Olist trong data/"] ::: engineStyle
+        C["Tính Toán Số Liệu Số Học Chuẩn Xác:
+        - delivery_variance_hours
+        - handoff_variance_hours
+        - expected_total_brl & difference_brl
+        - reconciled (abs diff <= 0.10)"] ::: engineStyle
     end
-    
-    Note over C: Tổng hợp Context Data
-    C->>POL: 3. Apply EC_POLICY_V2 (Gửi toàn bộ Context)
-    POL->>POL: Phân loại Issue, tính Refund, tạo Evidence
-    POL-->>V: 4. Gửi Draft JSON Output
-    
-    loop Validation & Feedback
-        V->>V: Kiểm tra Schema, Array Limit, Nulls, Math
-        alt Có lỗi (Fail)
-            V-->>POL: Trả về Error Log (VD: mảng evidence > 20)
-            POL->>POL: Correct data theo Error Log
-            POL-->>V: Gửi lại Draft v2
-        else Hợp lệ (Pass)
-            V-->>C: Trả về Final Validated JSON
-        end
-    end
-    
-    C->>C: 5. Ghi ra file output/EC_xxx.json & cập nhật Trace Log
 
+    %% Subgraph 2: Domain Agents
+    subgraph Phase2["PHASE 2: Domain Analysis (Phân Phối Cho Các Chuyên Gia Tên Miền)"]
+        D1["CustomerAgent
+        (Phân tích lịch sử khách hàng)"] ::: agentStyle
+        M1["Model: llama-3.1-8b-instant (Groq API - 8B)"] ::: modelBadge
+
+        D2["OrderProductAgent
+        (Trích xuất items, products, categories)"] ::: agentStyle
+        M2["Model: llama-3.1-8b-instant (Groq API - 8B)"] ::: modelBadge
+
+        D3["PaymentAgent
+        (Đối soát thanh toán & Split Payment)"] ::: agentStyle
+        M3["Model: llama-3.1-8b-instant (Groq API - 8B)"] ::: modelBadge
+
+        D4["DeliveryAgent
+        (Phân tích mốc thời gian & Trễ Seller/Vận chuyển)"] ::: agentStyle
+        M4["Model: llama-3.1-8b-instant (Groq API - 8B)"] ::: modelBadge
+    end
+
+    %% Subgraph 3: Policy Agent Reasoning
+    subgraph Phase3["PHASE 3: Policy Agent (Suy Luận Cây Ưu Tiên EC_POLICY_V2)"]
+        P1["PolicyAgent: Đánh Giá Cây Ưu Tiên EC_POLICY_V2
+        1. canceled_order_paid (Hoàn 100%)
+        2. unavailable_order_paid (Hoàn 100%)
+        3. late_delivery_seller (Hoàn Freight)
+        4. late_delivery_logistics (Hoàn Freight)
+        5. valid_split_payment (Giải thích, Hoàn 0)
+        6. unsupported_late_claim (Bác bỏ, Hoàn 0)"] ::: policyStyle
+        M5["Model: llama-3.1-8b-instant (Groq API - 8B <= 10B)"] ::: modelBadge
+    end
+
+    %% Subgraph 4: Verification & Guardrails
+    subgraph Phase4["PHASE 4: Verifier Agent (Kiểm Tra Quy Tắc & Rào Chắn Dữ Liệu)"]
+        V1["VerifierAgent: 
+        - Kiểm tra 5 định dạng Regex Evidence ID
+        - Xử lý null khi đơn không có Item
+        - Giới hạn mảng (Max 20 evidence, 5 actions, 3 sellers)
+        - Ép kiểu confidence trong range [0, 1]"] ::: verifierStyle
+    end
+
+    %% Subgraph 5: Output Generation
+    subgraph Phase5["PHASE 5: Đóng Gói & Xuất Kết Quả Nộp Bài"]
+        O1["Ghi file JSON kết quả: output_v3/EC_xxx.json"] ::: outputStyle
+        O2["Ghi nhật ký vết chạy: trace_output_v3.jsonl"] ::: outputStyle
+        O3["Ghi thông số kỹ thuật Model: metadata_output_v3.json"] ::: outputStyle
+        O4["Đóng gói file nộp bài chuẩn Portal: output_v3.zip"] ::: outputStyle
+    end
+
+    %% Workflow Connections
+    A --> B
+    B --> C
+    C --> D1 & D2 & D3 & D4
+    
+    D1 --- M1
+    D2 --- M2
+    D3 --- M3
+    D4 --- M4
+
+    D1 & D2 & D3 & D4 --> P1
+    P1 --- M5
+
+    P1 --> V1
+    V1 --> O1 & O2 & O3 & O4
 ```
 
 ---
 
-## 2. Chi tiết Workflow & Chuyển giao dữ liệu (Handoffs)
+## 2. Phân Bổ Model LLM Kỹ Thuật (Model Allocation Matrix)
 
-Quy trình xử lý một case (`EC_xxx.json`) sẽ trải qua **5 Phase** với các Payload (cấu trúc dữ liệu) được quy định nghiêm ngặt khi Handoff.
-
-### Phase 1: Phân tích Dữ liệu Gốc (Order & Product Agent)
-
-Vì Payment và Delivery cần thông tin từ Items (giá tiền, hạn giao hàng), **Order & Product Agent** phải chạy đầu tiên.
-
-* **Input:** `claimed_order_id` từ Coordinator.
-* **Nhiệm vụ:** Truy vấn `orders.csv`, `order_items.csv`, `products.csv`, `sellers.csv`. Lấy danh sách sản phẩm, category, tính tổng `price`, tổng `freight_value` và mốc `shipping_limit_date` sớm nhất của từng seller.
-
-
-* **Handoff Output (chuyển về Coordinator):**
-```json
-{
-  "order_status": "...",
-  "items_data": {
-     "item_ids": ["..."],
-     "product_ids": ["..."],
-     "category_names": ["..."],
-     "seller_ids": ["..."],
-     "expected_item_total": 100.0,
-     "expected_freight_total": 20.0
-  },
-  "shipping_limits": {"seller_A": "2018-05-10", "seller_B": "2018-05-12"}
-}
-
-```
-
-
-* *Quy tắc ngoại lệ:* Nếu đơn hàng không có item, mảng trả về rỗng `[]`, các số tiền = `null`.
-
-
-
-### Phase 2: Phân tích Song song (Customer, Payment, Delivery)
-
-Coordinator dùng dữ liệu từ Phase 1 để gọi 3 Agent phân tích chuyên sâu (có thể chạy bất đồng bộ/parallel để tiết kiệm thời gian).
-
-**2A. Customer Agent**
-
-* **Input:** `claimed_order_id`.
-* **Nhiệm vụ:** Map `customer_id` ra `customer_unique_id`, quét lại toàn bộ `orders.csv` để tìm `related_order_ids`.
-
-
-* **Handoff Output:** `{"customer_unique_id": "...", "related_order_ids": ["..."], "repeat_customer": true/false}`.
-
-**2B. Payment Agent**
-
-* **Input:** `claimed_order_id`, `expected_item_total`, `expected_freight_total` (Từ Phase 1).
-* **Nhiệm vụ:** Sum `payment_value` trong `order_payments.csv`. So sánh tổng payment với `expected_total_brl`.
-
-
-* **Handoff Output:** `{"payment_total_brl": 120.0, "difference_brl": 0.0, "reconciled": true, "split_payment": false}`.
-
-
-
-**2C. Delivery Agent**
-
-* **Input:** `claimed_order_id`, `shipping_limits` (Từ Phase 1).
-* **Nhiệm vụ:** Lấy các mốc thời gian, tính `delivery_variance_hours` và `handoff_variance_hours`. Đánh giá lỗi do Seller hay Logistics.
-
-
-* **Handoff Output:** `{"is_late_delivery_seller": false, "is_late_delivery_logistics": true, "carrier_handoff_variance_hours": 48.5}`.
-
-
-
-### Phase 3: Khai thác Chính sách (Policy Agent - BỘ NÃO)
-
-Coordinator tổng hợp toàn bộ JSON Output từ Phase 1 & 2 thành một cục `Global_Context` và gửi cho Policy Agent.
-
-* **Input:** `Global_Context` (chứa toàn bộ kết quả của 4 Agent trên) + `EC_POLICY_V2`.
-* **Nhiệm vụ:**
-1. *Chạy IF-ELSE theo mức độ ưu tiên:* Canceled -> Unavailable -> Late Seller -> Late Logistics -> Valid Split -> Unsupported.
-
-
-2. *Áp dụng Secondary Issues:* Kích hoạt cờ nếu thỏa mãn điều kiện `multi_item_order`, `repeat_customer`, v.v..
-
-
-3. *Tạo Actions & Refund:* Quyết định số tiền bồi hoàn (`refund_freight`, `issue_full_refund` hoặc 0) và gán `case_status`.
-
-
-4. *Khởi tạo mảng Evidence:* Sinh ra chuỗi format `order:<id>`, `item:<id>:<id>`, v.v..
-
-
-
-
-* **Handoff Output:** Một bản `Draft_Resolution_JSON` chứa toàn bộ các trường output theo yêu cầu.
-
-### Phase 4: Kiểm duyệt Khắt khe (Verifier Agent - BẢO VỆ)
-
-Policy Agent không được phép trả thẳng file cho Coordinator mà phải đưa qua Verifier Agent thẩm định.
-
-* **Input:** `Draft_Resolution_JSON` từ Policy Agent.
-* **Nhiệm vụ & Rules:**
-* **Rule 1 (Mảng):** Kiểm tra `evidence_ids.length <= 20`, `actions.length <= 5`, `order_ids.length <= 5`, v.v. Trích xuất và cắt bỏ phần thừa (hoặc bắt Policy tạo lại).
-
-
-* **Rule 2 (Format):** Dùng Regex check từng item trong `evidence_ids`. Nếu sai format (ví dụ: `product:123` - format sai), xóa bỏ.
-
-
-* **Rule 3 (Toán học):** Check giá trị `confidence` $\in [0, 1]$. Đảm bảo các trường tiền tệ (BRL) và thời gian (Hours) làm tròn 2 chữ số thập phân.
-
-
-* **Rule 4 (Null Handling):** Check nếu order không có items, thì các mảng liên quan có rỗng `[]` không và expected total có trả về `null` không.
-
-
-
-
-* **Vòng lặp Feedback (Crucial):**
-* Nếu PASS: Gắn cờ `"verified": true` và chuyển về Coordinator.
-* Nếu FAIL: Generate một chuỗi Prompt Feedback: *"Error: evidence_ids chứa định dạng sai 'product:123'. Giới hạn actions đang là 6 (Max là 5). Yêu cầu Policy Agent sửa lại."* và gọi lại Policy Agent.
-
-
-
-### Phase 5: Xuất File (Coordinator Agent)
-
-* **Nhiệm vụ:** Nhận `Validated_JSON` từ Verifier. Bọc lại theo đúng schema của bài thi và ghi ra file vào thư mục `output/EC_xxx.json`. Ghi lại hành trình vào `trace.jsonl`.
-
-
+| Vị trí / Agent | Nhiệm vụ chính | Provider | Tên Model | Tham số | Giới hạn quy định |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Domain Agents** (`CustomerAgent`, `OrderProductAgent`, `PaymentAgent`, `DeliveryAgent`) | Trích xuất ngữ cảnh chuyên biệt, phân tích định danh khách hàng, đơn hàng, thanh toán và vận chuyển. | Groq API | `llama-3.1-8b-instant` | 8B | $\le$ 10B |
+| **Policy Agent** (`PolicyAgent`) | Suy luận phán quyết theo cây ưu tiên chính sách `EC_POLICY_V2`, quyết định hoàn tiền, gán nguyên nhân gốc rễ và hành động. | Groq API | `llama-3.1-8b-instant` | 8B | $\le$ 10B |
+| **Verifier Agent** (`VerifierAgent`) | Thực thi quy tắc Deterministic Python Rule Engine, lọc Regex Evidence ID, xử lý Null và gọt mảng theo giới hạn schema. | Deterministic Python Engine | N/A (Code Python) | N/A | Khống chế lỗi hallucination |
 
 ---
 
-## 3. Lời khuyên Kỹ thuật khi Cài đặt (Implementation Tips)
+## 3. Chi Tiết Các Phase Trong Luồng Trao Đổi (A2A Handoffs)
 
-1. **System Prompt theo vai trò:** Đừng dùng prompt chung chung.
-* *Delivery Agent:* "Bạn là chuyên gia Logistics. Hãy làm toán trừ thời gian chính xác và làm tròn 2 chữ số..."
-* *Policy Agent:* "Bạn là Thẩm phán. Bạn CHỈ được phép ra quyết định dựa trên dữ liệu đã cung cấp, tuyệt đối tuân thủ theo thứ tự 1-6 của EC_POLICY_V2..."
+### Phase 1: Deterministic Data Engine
+- **Input:** File khiếu nại `input/EC_xxx.json` và 9 file CSV Olist trong `data/`.
+- **Thực thi:** Đọc dữ liệu, tính toán chính xác số học toán tiền tệ (`expected_total_brl`, `difference_brl`, `reconciled`) và hiệu số thời gian (`delivery_variance_hours`, `handoff_variance_hours`).
 
+### Phase 2: Domain Agents Processing (Groq LLM `llama-3.1-8b-instant`)
+- Các Agent chuyên miền phân tích song song context, đảm bảo đóng gói dữ liệu đầu ra riêng biệt.
 
-2. **Xử lý LLM Parameter Limit ($\le$ 10B):** Các LLM nhỏ rất dễ bị ảo giác (hallucination) độ dài. Việc có **Verifier Agent** thiết kế theo dạng *Deterministic Code* (dùng Python Pydantic hoặc JSON Schema validation cứng thay vì dùng LLM) kết hợp LLM sửa lỗi sẽ hiệu quả nhất và không bị trừ điểm. Bạn có thể code Verifier Agent bằng Python thuần túy.
-3. **Database Access:** Mỗi Data Agent nên được cấp các hàm (Tool Calling / Function Calling) thực thi SQL trên Pandas DataFrame tĩnh (vì là file CSV) hoặc SQLite in-memory thay vì bắt LLM đọc file text CSV thô.
+### Phase 3: Policy Agent Decision (Groq LLM `llama-3.1-8b-instant`)
+- Thực thi cây suy luận 6 cấp:
+  1. `canceled_order_paid`
+  2. `unavailable_order_paid`
+  3. `late_delivery_seller`
+  4. `late_delivery_logistics`
+  5. `valid_split_payment`
+  6. `unsupported_late_claim`
+
+### Phase 4: Verifier Agent Guardrails
+- Thực thi rào chắn dữ liệu 100% bằng Python Rule Engine:
+  - Match Regex 5 dạng Evidence ID (`order:`, `item:`, `payment:`, `seller:`, `policy:`).
+  - Áp giới hạn độ dài mảng (Evidence $\le$ 20, Actions $\le$ 5, Sellers $\le$ 3, Orders $\le$ 5).
+  - Ép giá trị `null` cho các đơn hàng không có sản phẩm.
+
+### Phase 5: Pipeline Archiving & Zip Generation
+- Ghi kết quả vào thư mục `output_v3/`, lưu nhật ký `trace_output_v3.jsonl`, `metadata_output_v3.json` và nén file **`output_v3.zip`** chuẩn định dạng portal (`output/EC_001.json` ... `output/EC_050.json`).
