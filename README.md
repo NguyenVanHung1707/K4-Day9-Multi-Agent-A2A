@@ -1,5 +1,29 @@
 # K4 Day 09 - Multi-Agent E-commerce Dispute Resolution
 
+> **Student:** Pham Tuan Anh  
+> **Branch:** phamtuananh  
+> **Model:** Qwen3.5-9B (SiliconFlow)  
+> **Framework:** LangGraph + SQLite + Deterministic Policy Engine
+
+---
+
+## 📊 Thống kê dữ liệu CSV
+
+| File CSV | Rows | Columns | Mô tả |
+|---|---:|---:|---|
+| `olist_customers_dataset.csv` | 99,441 | 5 | Thông tin khách hàng |
+| `olist_geolocation_dataset.csv` | 1,000,163 | 5 | Tọa độ địa lý |
+| `olist_order_items_dataset.csv` | 112,650 | 7 | Chi tiết items trong order |
+| `olist_order_payments_dataset.csv` | 103,886 | 5 | Thông tin thanh toán |
+| `olist_order_reviews_dataset.csv` | 99,224 | 7 | Đánh giá của khách hàng |
+| `olist_orders_dataset.csv` | 99,441 | 8 | **Thông tin đơn hàng (core)** |
+| `olist_products_dataset.csv` | 32,951 | 9 | Thông tin sản phẩm |
+| `olist_sellers_dataset.csv` | 3,095 | 4 | Thông tin người bán |
+| `product_category_name_translation.csv` | 71 | 2 | Dịch tên danh mục |
+| **TOTAL** | **1,550,922** | - | |
+
+---
+
 ## 1. Bài toán
 
 Xây dựng một hệ thống multi-agent để điều tra 50 yêu cầu hỗ trợ của khách hàng trên dữ liệu Olist. Với mỗi case, hệ thống phải đối chiếu nhiều nguồn dữ liệu, xác định vấn đề chính và vấn đề phụ, bên chịu trách nhiệm, bằng chứng, khoản hoàn đề xuất và các hành động xử lý.
