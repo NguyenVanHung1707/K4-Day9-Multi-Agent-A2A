@@ -27,7 +27,6 @@ class FastCoordinatorAgent:
         claimed_order_id = case_input["customer_request"]["claimed_order_id"]
         trace = []
 
-        # Data Engine Analysis
         raw_data = self.data_engine.analyze_case_data(claimed_order_id)
         raw_data["case_id"] = case_id
         trace.append({
@@ -37,7 +36,6 @@ class FastCoordinatorAgent:
             "summary": f"Extracted items, products, sellers for order {claimed_order_id}"
         })
 
-        # Domain Analysis
         cust_res = self.customer_agent.run(raw_data)
         pay_res = self.payment_agent.run(raw_data)
         del_res = self.delivery_agent.run(raw_data)
@@ -48,7 +46,6 @@ class FastCoordinatorAgent:
             "summary": "Completed domain analysis for customer, payments, and delivery"
         })
 
-        # Policy Agent Reasoning (EC_POLICY_V2 Tree)
         draft_resolution = self.policy_agent.run(raw_data)
         trace.append({
             "phase": "Phase 3: Policy Agent Reasoning",
@@ -57,7 +54,6 @@ class FastCoordinatorAgent:
             "summary": f"Determined primary issue: {draft_resolution['case_assessment']['primary_issue']}"
         })
 
-        # Verifier Agent
         is_valid, final_output, errors = self.verifier_agent.run(draft_resolution, raw_data)
         trace.append({
             "phase": "Phase 4: Verification",
@@ -69,16 +65,25 @@ class FastCoordinatorAgent:
         return final_output, trace
 
 
-def create_submission_zip(output_dir: str, base_dir: str) -> str:
-    zip_filepath = os.path.join(base_dir, "output.zip")
+def create_submission_zips(output_dir: str, base_dir: str):
+    """
+    Creates output.zip and output_v2.zip containing output/EC_001.json to output/EC_050.json.
+    """
     json_files = sorted(glob.glob(os.path.join(output_dir, "*.json")))
 
-    with zipfile.ZipFile(zip_filepath, "w", zipfile.ZIP_DEFLATED) as zipf:
+    # Write output.zip
+    zip1 = os.path.join(base_dir, "output.zip")
+    with zipfile.ZipFile(zip1, "w", zipfile.ZIP_DEFLATED) as zipf:
         for fpath in json_files:
-            arcname = f"output/{os.path.basename(fpath)}"
-            zipf.write(fpath, arcname)
+            zipf.write(fpath, f"output/{os.path.basename(fpath)}")
 
-    return zip_filepath
+    # Write output_v2.zip
+    zip2 = os.path.join(base_dir, "output_v2.zip")
+    with zipfile.ZipFile(zip2, "w", zipfile.ZIP_DEFLATED) as zipf:
+        for fpath in json_files:
+            zipf.write(fpath, f"output/{os.path.basename(fpath)}")
+
+    print(f"Created submission zips successfully: output.zip and output_v2.zip")
 
 
 def rebuild_all():
@@ -157,11 +162,10 @@ def rebuild_all():
     with open(metadata_path, "w", encoding="utf-8") as f:
         json.dump(metadata_content, f, indent=2, ensure_ascii=False)
 
-    zip_created = create_submission_zip(output_dir, base_dir)
+    create_submission_zips(output_dir, base_dir)
 
     print(f"Fast rebuild completed in {total_time}s!")
     print(f"50 Output JSON files updated in {output_dir}/")
-    print(f"Submission zip created: {zip_created}")
 
 
 if __name__ == "__main__":
