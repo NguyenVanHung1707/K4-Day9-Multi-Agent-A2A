@@ -123,10 +123,8 @@ class DataEngine:
                 product_ids.append(pid)
                 prod = self.products.get(pid, {})
                 cat = prod.get("product_category_name")
-                if cat:
-                    cat_en = self.category_translation.get(cat, cat)
-                    if cat_en and cat_en not in category_names:
-                        category_names.append(cat_en)
+                if cat and cat not in category_names:
+                    category_names.append(cat)
             
             sid = item.get("seller_id")
             if sid and sid not in seller_ids:
