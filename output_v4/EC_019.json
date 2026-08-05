@@ -27,8 +27,8 @@
   "customer_context": {
     "customer_unique_id": "e3301490c373db9263c15a73172d0c6f",
     "related_order_ids": [
-      "3ce16e50c1842ad30631811796a31afc",
-      "c7c28a159a907d1d0ff580856daffa72"
+      "c7c28a159a907d1d0ff580856daffa72",
+      "3ce16e50c1842ad30631811796a31afc"
     ]
   },
   "product_context": {
@@ -36,7 +36,7 @@
       "f4d18451e6c35980e6898e36dfd6fb55"
     ],
     "category_names": [
-      "cama_mesa_banho"
+      "bed_bath_table"
     ]
   },
   "delivery_analysis": {
